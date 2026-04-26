@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package consensus.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// KnowledgeService stores and retrieves durable agent learnings.
+service KnowledgeService {
+  // Search returns ranked knowledge units for a problem statement, error, or task.
+  rpc Search(KnowledgeServiceSearchRequest) returns (KnowledgeServiceSearchResponse);
+
+  // Get returns one knowledge unit by ID.
+  rpc Get(KnowledgeServiceGetRequest) returns (KnowledgeServiceGetResponse);
+
+  // Contribute submits a new candidate knowledge unit.
+  rpc Contribute(KnowledgeServiceContributeRequest) returns (KnowledgeServiceContributeResponse);
+
+  // Update amends an existing knowledge unit.
+  rpc Update(KnowledgeServiceUpdateRequest) returns (KnowledgeServiceUpdateResponse);
+}
+
+// VoteService records whether a knowledge unit worked in a concrete context.
+service VoteService {
+  // Cast records a utility signal for a knowledge unit.
+  rpc Cast(VoteServiceCastRequest) returns (VoteServiceCastResponse);
+
+  // Retract removes or corrects a previous utility signal.
+  rpc Retract(VoteServiceRetractRequest) returns (VoteServiceRetractResponse);
+}
+
+// GraphService manages typed relationships between knowledge units and problems.
+service GraphService {
+  // Link creates a typed relationship between two nodes.
+  rpc Link(GraphServiceLinkRequest) returns (GraphServiceLinkResponse);
+
+  // Unlink tombstones a relationship between two nodes.
+  rpc Unlink(GraphServiceUnlinkRequest) returns (GraphServiceUnlinkResponse);
+
+  // Neighbors returns nearby units and relationships.
+  rpc Neighbors(GraphServiceNeighborsRequest) returns (GraphServiceNeighborsResponse);
+
+  // ExplainPath explains why two units or problems are connected.
+  rpc ExplainPath(GraphServiceExplainPathRequest) returns (GraphServiceExplainPathResponse);
+}
+
+message KnowledgeUnit {
+  string id = 1;
+  string title = 2;
+  string summary = 3;
+  string detail = 4;
+  string action = 5;
+  string kind = 6;
+  repeated string labels = 7;
+  map<string, string> context = 8;
+  repeated EvidenceRef evidence_refs = 9;
+  string review_state = 10;
+  string lifecycle_state = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  google.protobuf.Timestamp last_confirmed_at = 14;
+}
+
+message EvidenceRef {
+  string kind = 1;
+  string title = 2;
+  string uri = 3;
+  string excerpt = 4;
+}
+
+message KnowledgeServiceSearchRequest {
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  repeated string labels = 2;
+  map<string, string> context = 3;
+  int32 limit = 4 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 50
+  }];
+}
+
+message KnowledgeServiceSearchResponse {
+  repeated KnowledgeSearchResult results = 1;
+}
+
+message KnowledgeSearchResult {
+  KnowledgeUnit unit = 1;
+  double score = 2;
+  string rank_reason = 3;
+  repeated string matched_signals = 4;
+}
+
+message KnowledgeServiceGetRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message KnowledgeServiceGetResponse {
+  KnowledgeUnit unit = 1;
+}
+
+message KnowledgeServiceContributeRequest {
+  string title = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string summary = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 1000
+  }];
+  string detail = 3 [(buf.validate.field).string.max_len = 12000];
+  string action = 4 [(buf.validate.field).string.max_len = 4000];
+  string kind = 5 [(buf.validate.field).string.max_len = 100];
+  repeated string labels = 6;
+  map<string, string> context = 7;
+  repeated EvidenceRef evidence_refs = 8;
+  string idempotency_key = 9 [(buf.validate.field).string.max_len = 255];
+}
+
+message KnowledgeServiceContributeResponse {
+  KnowledgeUnit unit = 1;
+  bool pending_review = 2;
+}
+
+message KnowledgeServiceUpdateRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string title = 2 [(buf.validate.field).string.max_len = 255];
+  string summary = 3 [(buf.validate.field).string.max_len = 1000];
+  string detail = 4 [(buf.validate.field).string.max_len = 12000];
+  string action = 5 [(buf.validate.field).string.max_len = 4000];
+  string kind = 6 [(buf.validate.field).string.max_len = 100];
+  repeated string labels = 7;
+  map<string, string> context = 8;
+  repeated EvidenceRef evidence_refs = 9;
+}
+
+message KnowledgeServiceUpdateResponse {
+  KnowledgeUnit unit = 1;
+}
+
+message VoteServiceCastRequest {
+  string knowledge_unit_id = 1 [(buf.validate.field).string.uuid = true];
+  string outcome = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  double confidence = 3;
+  string rationale = 4 [(buf.validate.field).string.max_len = 2000];
+  string idempotency_key = 5 [(buf.validate.field).string.max_len = 255];
+}
+
+message VoteServiceCastResponse {
+  string vote_id = 1;
+}
+
+message VoteServiceRetractRequest {
+  string vote_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message VoteServiceRetractResponse {}
+
+message GraphServiceLinkRequest {
+  string from_id = 1 [(buf.validate.field).string.uuid = true];
+  string to_id = 2 [(buf.validate.field).string.uuid = true];
+  string relationship = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  string rationale = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+message GraphServiceLinkResponse {
+  string edge_id = 1;
+}
+
+message GraphServiceUnlinkRequest {
+  string edge_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GraphServiceUnlinkResponse {}
+
+message GraphServiceNeighborsRequest {
+  string node_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 limit = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 50
+  }];
+}
+
+message GraphServiceNeighborsResponse {
+  repeated KnowledgeUnit units = 1;
+  repeated GraphEdge edges = 2;
+}
+
+message GraphEdge {
+  string id = 1;
+  string from_id = 2;
+  string to_id = 3;
+  string relationship = 4;
+  string rationale = 5;
+}
+
+message GraphServiceExplainPathRequest {
+  string from_id = 1 [(buf.validate.field).string.uuid = true];
+  string to_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+message GraphServiceExplainPathResponse {
+  string explanation = 1;
+  repeated GraphEdge edges = 2;
+}

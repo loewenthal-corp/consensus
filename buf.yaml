@@ -1,0 +1,13 @@
+---
+version: v2
+deps:
+  - buf.build/bufbuild/protovalidate
+modules:
+  - path: proto
+    name: buf.build/loewenthal-corp/consensus
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

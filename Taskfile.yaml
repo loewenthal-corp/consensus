@@ -1,0 +1,68 @@
+---
+version: "3"
+
+vars:
+  CPU_COUNT:
+    sh: nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "4"
+  PARALLEL_COUNT:
+    sh: echo $(({{.CPU_COUNT}} * 2))
+  BUF: go run github.com/bufbuild/buf/cmd/buf
+
+env:
+  GOCACHE: /tmp/consensus-go-build
+  GOMODCACHE: /tmp/consensus-go-mod-cache
+  BUF_CACHE_DIR: /tmp/consensus-buf-cache
+
+tasks:
+  do:
+    desc: "Run generation, formatting, linting, tests, and build"
+    cmds:
+      - task: generate
+      - task: format
+      - task: lint
+      - task: test
+      - task: build
+
+  generate:
+    desc: "Generate protobuf and Ent code"
+    cmds:
+      - task: generate::proto
+      - task: generate::ent
+
+  generate::proto:
+    desc: "Generate Go code from protobuf contracts"
+    cmds:
+      - "{{.BUF}} dep update"
+      - "{{.BUF}} generate"
+
+  generate::ent:
+    desc: "Generate Ent schema code"
+    cmds:
+      - go run ./internal/postgres/entc.go
+
+  format:
+    desc: "Format Go and proto files"
+    cmds:
+      - go fmt ./...
+      - "{{.BUF}} format -w"
+
+  lint:
+    desc: "Run Go vet and Buf lint"
+    cmds:
+      - go vet -p {{.CPU_COUNT}} ./...
+      - "{{.BUF}} lint"
+
+  test:
+    desc: "Run Go tests"
+    cmds:
+      - go test -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} ./...
+
+  test::e2e:
+    desc: "Run Testcontainers-backed end-to-end tests"
+    cmds:
+      - go test -tags=e2e -p {{.CPU_COUNT}} -parallel {{.PARALLEL_COUNT}} ./...
+
+  build:
+    desc: "Build the Consensus server"
+    cmds:
+      - go build -o /tmp/consensus ./cmd/consensus
