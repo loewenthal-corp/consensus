@@ -18,10 +18,10 @@ type Tx struct {
 	AuditEvent *AuditEventClient
 	// GraphEdge is the client for interacting with the GraphEdge builders.
 	GraphEdge *GraphEdgeClient
+	// Insight is the client for interacting with the Insight builders.
+	Insight *InsightClient
 	// Job is the client for interacting with the Job builders.
 	Job *JobClient
-	// KnowledgeUnit is the client for interacting with the KnowledgeUnit builders.
-	KnowledgeUnit *KnowledgeUnitClient
 	// ProblemFingerprint is the client for interacting with the ProblemFingerprint builders.
 	ProblemFingerprint *ProblemFingerprintClient
 	// Setting is the client for interacting with the Setting builders.
@@ -164,8 +164,8 @@ func (tx *Tx) init() {
 	tx.Actor = NewActorClient(tx.config)
 	tx.AuditEvent = NewAuditEventClient(tx.config)
 	tx.GraphEdge = NewGraphEdgeClient(tx.config)
+	tx.Insight = NewInsightClient(tx.config)
 	tx.Job = NewJobClient(tx.config)
-	tx.KnowledgeUnit = NewKnowledgeUnitClient(tx.config)
 	tx.ProblemFingerprint = NewProblemFingerprintClient(tx.config)
 	tx.Setting = NewSettingClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)

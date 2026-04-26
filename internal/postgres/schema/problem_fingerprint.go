@@ -23,7 +23,7 @@ func (ProblemFingerprint) Fields() []ent.Field {
 			Default("default").
 			NotEmpty().
 			MaxLen(255),
-		field.UUID("knowledge_unit_id", uuid.UUID{}),
+		field.UUID("insight_id", uuid.UUID{}),
 		field.String("error_hash").
 			Optional().
 			MaxLen(255),
@@ -54,7 +54,7 @@ func (ProblemFingerprint) Fields() []ent.Field {
 func (ProblemFingerprint) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_key"),
-		index.Fields("tenant_key", "knowledge_unit_id"),
+		index.Fields("tenant_key", "insight_id"),
 		index.Fields("tenant_key", "error_hash"),
 	}
 }

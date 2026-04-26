@@ -12,68 +12,68 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/predicate"
 )
 
-// KnowledgeUnitQuery is the builder for querying KnowledgeUnit entities.
-type KnowledgeUnitQuery struct {
+// InsightQuery is the builder for querying Insight entities.
+type InsightQuery struct {
 	config
 	ctx        *QueryContext
-	order      []knowledgeunit.OrderOption
+	order      []insight.OrderOption
 	inters     []Interceptor
-	predicates []predicate.KnowledgeUnit
+	predicates []predicate.Insight
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the KnowledgeUnitQuery builder.
-func (_q *KnowledgeUnitQuery) Where(ps ...predicate.KnowledgeUnit) *KnowledgeUnitQuery {
+// Where adds a new predicate for the InsightQuery builder.
+func (_q *InsightQuery) Where(ps ...predicate.Insight) *InsightQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *KnowledgeUnitQuery) Limit(limit int) *KnowledgeUnitQuery {
+func (_q *InsightQuery) Limit(limit int) *InsightQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *KnowledgeUnitQuery) Offset(offset int) *KnowledgeUnitQuery {
+func (_q *InsightQuery) Offset(offset int) *InsightQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *KnowledgeUnitQuery) Unique(unique bool) *KnowledgeUnitQuery {
+func (_q *InsightQuery) Unique(unique bool) *InsightQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *KnowledgeUnitQuery) Order(o ...knowledgeunit.OrderOption) *KnowledgeUnitQuery {
+func (_q *InsightQuery) Order(o ...insight.OrderOption) *InsightQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// First returns the first KnowledgeUnit entity from the query.
-// Returns a *NotFoundError when no KnowledgeUnit was found.
-func (_q *KnowledgeUnitQuery) First(ctx context.Context) (*KnowledgeUnit, error) {
+// First returns the first Insight entity from the query.
+// Returns a *NotFoundError when no Insight was found.
+func (_q *InsightQuery) First(ctx context.Context) (*Insight, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{knowledgeunit.Label}
+		return nil, &NotFoundError{insight.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) FirstX(ctx context.Context) *KnowledgeUnit {
+func (_q *InsightQuery) FirstX(ctx context.Context) *Insight {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -81,22 +81,22 @@ func (_q *KnowledgeUnitQuery) FirstX(ctx context.Context) *KnowledgeUnit {
 	return node
 }
 
-// FirstID returns the first KnowledgeUnit ID from the query.
-// Returns a *NotFoundError when no KnowledgeUnit ID was found.
-func (_q *KnowledgeUnitQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first Insight ID from the query.
+// Returns a *NotFoundError when no Insight ID was found.
+func (_q *InsightQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{knowledgeunit.Label}
+		err = &NotFoundError{insight.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *InsightQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -104,10 +104,10 @@ func (_q *KnowledgeUnitQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single KnowledgeUnit entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one KnowledgeUnit entity is found.
-// Returns a *NotFoundError when no KnowledgeUnit entities are found.
-func (_q *KnowledgeUnitQuery) Only(ctx context.Context) (*KnowledgeUnit, error) {
+// Only returns a single Insight entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one Insight entity is found.
+// Returns a *NotFoundError when no Insight entities are found.
+func (_q *InsightQuery) Only(ctx context.Context) (*Insight, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -116,14 +116,14 @@ func (_q *KnowledgeUnitQuery) Only(ctx context.Context) (*KnowledgeUnit, error) 
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{knowledgeunit.Label}
+		return nil, &NotFoundError{insight.Label}
 	default:
-		return nil, &NotSingularError{knowledgeunit.Label}
+		return nil, &NotSingularError{insight.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) OnlyX(ctx context.Context) *KnowledgeUnit {
+func (_q *InsightQuery) OnlyX(ctx context.Context) *Insight {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -131,10 +131,10 @@ func (_q *KnowledgeUnitQuery) OnlyX(ctx context.Context) *KnowledgeUnit {
 	return node
 }
 
-// OnlyID is like Only, but returns the only KnowledgeUnit ID in the query.
-// Returns a *NotSingularError when more than one KnowledgeUnit ID is found.
+// OnlyID is like Only, but returns the only Insight ID in the query.
+// Returns a *NotSingularError when more than one Insight ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *KnowledgeUnitQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *InsightQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -143,15 +143,15 @@ func (_q *KnowledgeUnitQuery) OnlyID(ctx context.Context) (id uuid.UUID, err err
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{knowledgeunit.Label}
+		err = &NotFoundError{insight.Label}
 	default:
-		err = &NotSingularError{knowledgeunit.Label}
+		err = &NotSingularError{insight.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *InsightQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -159,18 +159,18 @@ func (_q *KnowledgeUnitQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of KnowledgeUnits.
-func (_q *KnowledgeUnitQuery) All(ctx context.Context) ([]*KnowledgeUnit, error) {
+// All executes the query and returns a list of Insights.
+func (_q *InsightQuery) All(ctx context.Context) ([]*Insight, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*KnowledgeUnit, *KnowledgeUnitQuery]()
-	return withInterceptors[[]*KnowledgeUnit](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*Insight, *InsightQuery]()
+	return withInterceptors[[]*Insight](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) AllX(ctx context.Context) []*KnowledgeUnit {
+func (_q *InsightQuery) AllX(ctx context.Context) []*Insight {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -178,20 +178,20 @@ func (_q *KnowledgeUnitQuery) AllX(ctx context.Context) []*KnowledgeUnit {
 	return nodes
 }
 
-// IDs executes the query and returns a list of KnowledgeUnit IDs.
-func (_q *KnowledgeUnitQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of Insight IDs.
+func (_q *InsightQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(knowledgeunit.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(insight.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *InsightQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -200,16 +200,16 @@ func (_q *KnowledgeUnitQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *KnowledgeUnitQuery) Count(ctx context.Context) (int, error) {
+func (_q *InsightQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*KnowledgeUnitQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*InsightQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) CountX(ctx context.Context) int {
+func (_q *InsightQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -218,7 +218,7 @@ func (_q *KnowledgeUnitQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *KnowledgeUnitQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *InsightQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -231,7 +231,7 @@ func (_q *KnowledgeUnitQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *KnowledgeUnitQuery) ExistX(ctx context.Context) bool {
+func (_q *InsightQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -239,18 +239,18 @@ func (_q *KnowledgeUnitQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the KnowledgeUnitQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the InsightQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *KnowledgeUnitQuery) Clone() *KnowledgeUnitQuery {
+func (_q *InsightQuery) Clone() *InsightQuery {
 	if _q == nil {
 		return nil
 	}
-	return &KnowledgeUnitQuery{
+	return &InsightQuery{
 		config:     _q.config,
 		ctx:        _q.ctx.Clone(),
-		order:      append([]knowledgeunit.OrderOption{}, _q.order...),
+		order:      append([]insight.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.KnowledgeUnit{}, _q.predicates...),
+		predicates: append([]predicate.Insight{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -267,15 +267,15 @@ func (_q *KnowledgeUnitQuery) Clone() *KnowledgeUnitQuery {
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.KnowledgeUnit.Query().
-//		GroupBy(knowledgeunit.FieldTenantKey).
+//	client.Insight.Query().
+//		GroupBy(insight.FieldTenantKey).
 //		Aggregate(postgres.Count()).
 //		Scan(ctx, &v)
-func (_q *KnowledgeUnitQuery) GroupBy(field string, fields ...string) *KnowledgeUnitGroupBy {
+func (_q *InsightQuery) GroupBy(field string, fields ...string) *InsightGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &KnowledgeUnitGroupBy{build: _q}
+	grbuild := &InsightGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = knowledgeunit.Label
+	grbuild.label = insight.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -289,23 +289,23 @@ func (_q *KnowledgeUnitQuery) GroupBy(field string, fields ...string) *Knowledge
 //		TenantKey string `json:"tenant_key,omitempty"`
 //	}
 //
-//	client.KnowledgeUnit.Query().
-//		Select(knowledgeunit.FieldTenantKey).
+//	client.Insight.Query().
+//		Select(insight.FieldTenantKey).
 //		Scan(ctx, &v)
-func (_q *KnowledgeUnitQuery) Select(fields ...string) *KnowledgeUnitSelect {
+func (_q *InsightQuery) Select(fields ...string) *InsightSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &KnowledgeUnitSelect{KnowledgeUnitQuery: _q}
-	sbuild.label = knowledgeunit.Label
+	sbuild := &InsightSelect{InsightQuery: _q}
+	sbuild.label = insight.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a KnowledgeUnitSelect configured with the given aggregations.
-func (_q *KnowledgeUnitQuery) Aggregate(fns ...AggregateFunc) *KnowledgeUnitSelect {
+// Aggregate returns a InsightSelect configured with the given aggregations.
+func (_q *InsightQuery) Aggregate(fns ...AggregateFunc) *InsightSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *KnowledgeUnitQuery) prepareQuery(ctx context.Context) error {
+func (_q *InsightQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("postgres: uninitialized interceptor (forgotten import postgres/runtime?)")
@@ -317,7 +317,7 @@ func (_q *KnowledgeUnitQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !knowledgeunit.ValidColumn(f) {
+		if !insight.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("postgres: invalid field %q for query", f)}
 		}
 	}
@@ -331,16 +331,16 @@ func (_q *KnowledgeUnitQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *KnowledgeUnitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*KnowledgeUnit, error) {
+func (_q *InsightQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Insight, error) {
 	var (
-		nodes = []*KnowledgeUnit{}
+		nodes = []*Insight{}
 		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*KnowledgeUnit).scanValues(nil, columns)
+		return (*Insight).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &KnowledgeUnit{config: _q.config}
+		node := &Insight{config: _q.config}
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
@@ -356,7 +356,7 @@ func (_q *KnowledgeUnitQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	return nodes, nil
 }
 
-func (_q *KnowledgeUnitQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *InsightQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -365,8 +365,8 @@ func (_q *KnowledgeUnitQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *KnowledgeUnitQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(knowledgeunit.Table, knowledgeunit.Columns, sqlgraph.NewFieldSpec(knowledgeunit.FieldID, field.TypeUUID))
+func (_q *InsightQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(insight.Table, insight.Columns, sqlgraph.NewFieldSpec(insight.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -375,9 +375,9 @@ func (_q *KnowledgeUnitQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, knowledgeunit.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, insight.FieldID)
 		for i := range fields {
-			if fields[i] != knowledgeunit.FieldID {
+			if fields[i] != insight.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -405,12 +405,12 @@ func (_q *KnowledgeUnitQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *KnowledgeUnitQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *InsightQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(knowledgeunit.Table)
+	t1 := builder.Table(insight.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = knowledgeunit.Columns
+		columns = insight.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -437,28 +437,28 @@ func (_q *KnowledgeUnitQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// KnowledgeUnitGroupBy is the group-by builder for KnowledgeUnit entities.
-type KnowledgeUnitGroupBy struct {
+// InsightGroupBy is the group-by builder for Insight entities.
+type InsightGroupBy struct {
 	selector
-	build *KnowledgeUnitQuery
+	build *InsightQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *KnowledgeUnitGroupBy) Aggregate(fns ...AggregateFunc) *KnowledgeUnitGroupBy {
+func (_g *InsightGroupBy) Aggregate(fns ...AggregateFunc) *InsightGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *KnowledgeUnitGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *InsightGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*KnowledgeUnitQuery, *KnowledgeUnitGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*InsightQuery, *InsightGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *KnowledgeUnitGroupBy) sqlScan(ctx context.Context, root *KnowledgeUnitQuery, v any) error {
+func (_g *InsightGroupBy) sqlScan(ctx context.Context, root *InsightQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -485,28 +485,28 @@ func (_g *KnowledgeUnitGroupBy) sqlScan(ctx context.Context, root *KnowledgeUnit
 	return sql.ScanSlice(rows, v)
 }
 
-// KnowledgeUnitSelect is the builder for selecting fields of KnowledgeUnit entities.
-type KnowledgeUnitSelect struct {
-	*KnowledgeUnitQuery
+// InsightSelect is the builder for selecting fields of Insight entities.
+type InsightSelect struct {
+	*InsightQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *KnowledgeUnitSelect) Aggregate(fns ...AggregateFunc) *KnowledgeUnitSelect {
+func (_s *InsightSelect) Aggregate(fns ...AggregateFunc) *InsightSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *KnowledgeUnitSelect) Scan(ctx context.Context, v any) error {
+func (_s *InsightSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*KnowledgeUnitQuery, *KnowledgeUnitSelect](ctx, _s.KnowledgeUnitQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*InsightQuery, *InsightSelect](ctx, _s.InsightQuery, _s, _s.inters, v)
 }
 
-func (_s *KnowledgeUnitSelect) sqlScan(ctx context.Context, root *KnowledgeUnitQuery, v any) error {
+func (_s *InsightSelect) sqlScan(ctx context.Context, root *InsightQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

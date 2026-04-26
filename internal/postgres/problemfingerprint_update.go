@@ -42,16 +42,16 @@ func (_u *ProblemFingerprintUpdate) SetNillableTenantKey(v *string) *ProblemFing
 	return _u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_u *ProblemFingerprintUpdate) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintUpdate {
-	_u.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_u *ProblemFingerprintUpdate) SetInsightID(v uuid.UUID) *ProblemFingerprintUpdate {
+	_u.mutation.SetInsightID(v)
 	return _u
 }
 
-// SetNillableKnowledgeUnitID sets the "knowledge_unit_id" field if the given value is not nil.
-func (_u *ProblemFingerprintUpdate) SetNillableKnowledgeUnitID(v *uuid.UUID) *ProblemFingerprintUpdate {
+// SetNillableInsightID sets the "insight_id" field if the given value is not nil.
+func (_u *ProblemFingerprintUpdate) SetNillableInsightID(v *uuid.UUID) *ProblemFingerprintUpdate {
 	if v != nil {
-		_u.SetKnowledgeUnitID(*v)
+		_u.SetInsightID(*v)
 	}
 	return _u
 }
@@ -275,8 +275,8 @@ func (_u *ProblemFingerprintUpdate) sqlSave(ctx context.Context) (_node int, err
 	if value, ok := _u.mutation.TenantKey(); ok {
 		_spec.SetField(problemfingerprint.FieldTenantKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(problemfingerprint.FieldKnowledgeUnitID, field.TypeUUID, value)
+	if value, ok := _u.mutation.InsightID(); ok {
+		_spec.SetField(problemfingerprint.FieldInsightID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.ErrorHash(); ok {
 		_spec.SetField(problemfingerprint.FieldErrorHash, field.TypeString, value)
@@ -354,16 +354,16 @@ func (_u *ProblemFingerprintUpdateOne) SetNillableTenantKey(v *string) *ProblemF
 	return _u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_u *ProblemFingerprintUpdateOne) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintUpdateOne {
-	_u.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_u *ProblemFingerprintUpdateOne) SetInsightID(v uuid.UUID) *ProblemFingerprintUpdateOne {
+	_u.mutation.SetInsightID(v)
 	return _u
 }
 
-// SetNillableKnowledgeUnitID sets the "knowledge_unit_id" field if the given value is not nil.
-func (_u *ProblemFingerprintUpdateOne) SetNillableKnowledgeUnitID(v *uuid.UUID) *ProblemFingerprintUpdateOne {
+// SetNillableInsightID sets the "insight_id" field if the given value is not nil.
+func (_u *ProblemFingerprintUpdateOne) SetNillableInsightID(v *uuid.UUID) *ProblemFingerprintUpdateOne {
 	if v != nil {
-		_u.SetKnowledgeUnitID(*v)
+		_u.SetInsightID(*v)
 	}
 	return _u
 }
@@ -617,8 +617,8 @@ func (_u *ProblemFingerprintUpdateOne) sqlSave(ctx context.Context) (_node *Prob
 	if value, ok := _u.mutation.TenantKey(); ok {
 		_spec.SetField(problemfingerprint.FieldTenantKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(problemfingerprint.FieldKnowledgeUnitID, field.TypeUUID, value)
+	if value, ok := _u.mutation.InsightID(); ok {
+		_spec.SetField(problemfingerprint.FieldInsightID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.ErrorHash(); ok {
 		_spec.SetField(problemfingerprint.FieldErrorHash, field.TypeString, value)

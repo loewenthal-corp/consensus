@@ -16,8 +16,8 @@ const (
 	FieldID = "id"
 	// FieldTenantKey holds the string denoting the tenant_key field in the database.
 	FieldTenantKey = "tenant_key"
-	// FieldKnowledgeUnitID holds the string denoting the knowledge_unit_id field in the database.
-	FieldKnowledgeUnitID = "knowledge_unit_id"
+	// FieldInsightID holds the string denoting the insight_id field in the database.
+	FieldInsightID = "insight_id"
 	// FieldErrorHash holds the string denoting the error_hash field in the database.
 	FieldErrorHash = "error_hash"
 	// FieldCommand holds the string denoting the command field in the database.
@@ -42,7 +42,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldTenantKey,
-	FieldKnowledgeUnitID,
+	FieldInsightID,
 	FieldErrorHash,
 	FieldCommand,
 	FieldToolchain,
@@ -99,9 +99,9 @@ func ByTenantKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTenantKey, opts...).ToFunc()
 }
 
-// ByKnowledgeUnitID orders the results by the knowledge_unit_id field.
-func ByKnowledgeUnitID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldKnowledgeUnitID, opts...).ToFunc()
+// ByInsightID orders the results by the insight_id field.
+func ByInsightID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsightID, opts...).ToFunc()
 }
 
 // ByErrorHash orders the results by the error_hash field.

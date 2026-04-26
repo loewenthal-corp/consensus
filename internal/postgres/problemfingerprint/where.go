@@ -60,9 +60,9 @@ func TenantKey(v string) predicate.ProblemFingerprint {
 	return predicate.ProblemFingerprint(sql.FieldEQ(FieldTenantKey, v))
 }
 
-// KnowledgeUnitID applies equality check predicate on the "knowledge_unit_id" field. It's identical to KnowledgeUnitIDEQ.
-func KnowledgeUnitID(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldEQ(FieldKnowledgeUnitID, v))
+// InsightID applies equality check predicate on the "insight_id" field. It's identical to InsightIDEQ.
+func InsightID(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldEQ(FieldInsightID, v))
 }
 
 // ErrorHash applies equality check predicate on the "error_hash" field. It's identical to ErrorHashEQ.
@@ -165,44 +165,44 @@ func TenantKeyContainsFold(v string) predicate.ProblemFingerprint {
 	return predicate.ProblemFingerprint(sql.FieldContainsFold(FieldTenantKey, v))
 }
 
-// KnowledgeUnitIDEQ applies the EQ predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDEQ(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldEQ(FieldKnowledgeUnitID, v))
+// InsightIDEQ applies the EQ predicate on the "insight_id" field.
+func InsightIDEQ(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldEQ(FieldInsightID, v))
 }
 
-// KnowledgeUnitIDNEQ applies the NEQ predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDNEQ(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldNEQ(FieldKnowledgeUnitID, v))
+// InsightIDNEQ applies the NEQ predicate on the "insight_id" field.
+func InsightIDNEQ(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldNEQ(FieldInsightID, v))
 }
 
-// KnowledgeUnitIDIn applies the In predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDIn(vs ...uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldIn(FieldKnowledgeUnitID, vs...))
+// InsightIDIn applies the In predicate on the "insight_id" field.
+func InsightIDIn(vs ...uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldIn(FieldInsightID, vs...))
 }
 
-// KnowledgeUnitIDNotIn applies the NotIn predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDNotIn(vs ...uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldNotIn(FieldKnowledgeUnitID, vs...))
+// InsightIDNotIn applies the NotIn predicate on the "insight_id" field.
+func InsightIDNotIn(vs ...uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldNotIn(FieldInsightID, vs...))
 }
 
-// KnowledgeUnitIDGT applies the GT predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDGT(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldGT(FieldKnowledgeUnitID, v))
+// InsightIDGT applies the GT predicate on the "insight_id" field.
+func InsightIDGT(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldGT(FieldInsightID, v))
 }
 
-// KnowledgeUnitIDGTE applies the GTE predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDGTE(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldGTE(FieldKnowledgeUnitID, v))
+// InsightIDGTE applies the GTE predicate on the "insight_id" field.
+func InsightIDGTE(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldGTE(FieldInsightID, v))
 }
 
-// KnowledgeUnitIDLT applies the LT predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDLT(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldLT(FieldKnowledgeUnitID, v))
+// InsightIDLT applies the LT predicate on the "insight_id" field.
+func InsightIDLT(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldLT(FieldInsightID, v))
 }
 
-// KnowledgeUnitIDLTE applies the LTE predicate on the "knowledge_unit_id" field.
-func KnowledgeUnitIDLTE(v uuid.UUID) predicate.ProblemFingerprint {
-	return predicate.ProblemFingerprint(sql.FieldLTE(FieldKnowledgeUnitID, v))
+// InsightIDLTE applies the LTE predicate on the "insight_id" field.
+func InsightIDLTE(v uuid.UUID) predicate.ProblemFingerprint {
+	return predicate.ProblemFingerprint(sql.FieldLTE(FieldInsightID, v))
 }
 
 // ErrorHashEQ applies the EQ predicate on the "error_hash" field.

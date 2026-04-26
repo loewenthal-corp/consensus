@@ -15,11 +15,11 @@ type AuditEvent func(*sql.Selector)
 // GraphEdge is the predicate function for graphedge builders.
 type GraphEdge func(*sql.Selector)
 
+// Insight is the predicate function for insight builders.
+type Insight func(*sql.Selector)
+
 // Job is the predicate function for job builders.
 type Job func(*sql.Selector)
-
-// KnowledgeUnit is the predicate function for knowledgeunit builders.
-type KnowledgeUnit func(*sql.Selector)
 
 // ProblemFingerprint is the predicate function for problemfingerprint builders.
 type ProblemFingerprint func(*sql.Selector)

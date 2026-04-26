@@ -87,7 +87,6 @@ func TestServer_MCPListsAllowlistedTools(t *testing.T) {
 	require.Contains(t, text, "Search returns ranked insights")
 	require.Contains(t, text, "smallest concrete example")
 	require.NotContains(t, text, "consensus_v1_InsightService_Update")
-	require.NotContains(t, text, "KnowledgeService")
 	require.NotContains(t, text, "VoteService")
 	require.NotContains(t, text, "GraphService")
 }

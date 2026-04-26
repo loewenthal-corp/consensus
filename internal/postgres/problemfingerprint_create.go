@@ -38,9 +38,9 @@ func (_c *ProblemFingerprintCreate) SetNillableTenantKey(v *string) *ProblemFing
 	return _c
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_c *ProblemFingerprintCreate) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintCreate {
-	_c.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_c *ProblemFingerprintCreate) SetInsightID(v uuid.UUID) *ProblemFingerprintCreate {
+	_c.mutation.SetInsightID(v)
 	return _c
 }
 
@@ -221,8 +221,8 @@ func (_c *ProblemFingerprintCreate) check() error {
 			return &ValidationError{Name: "tenant_key", err: fmt.Errorf(`postgres: validator failed for field "ProblemFingerprint.tenant_key": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.KnowledgeUnitID(); !ok {
-		return &ValidationError{Name: "knowledge_unit_id", err: errors.New(`postgres: missing required field "ProblemFingerprint.knowledge_unit_id"`)}
+	if _, ok := _c.mutation.InsightID(); !ok {
+		return &ValidationError{Name: "insight_id", err: errors.New(`postgres: missing required field "ProblemFingerprint.insight_id"`)}
 	}
 	if v, ok := _c.mutation.ErrorHash(); ok {
 		if err := problemfingerprint.ErrorHashValidator(v); err != nil {
@@ -297,9 +297,9 @@ func (_c *ProblemFingerprintCreate) createSpec() (*ProblemFingerprint, *sqlgraph
 		_spec.SetField(problemfingerprint.FieldTenantKey, field.TypeString, value)
 		_node.TenantKey = value
 	}
-	if value, ok := _c.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(problemfingerprint.FieldKnowledgeUnitID, field.TypeUUID, value)
-		_node.KnowledgeUnitID = value
+	if value, ok := _c.mutation.InsightID(); ok {
+		_spec.SetField(problemfingerprint.FieldInsightID, field.TypeUUID, value)
+		_node.InsightID = value
 	}
 	if value, ok := _c.mutation.ErrorHash(); ok {
 		_spec.SetField(problemfingerprint.FieldErrorHash, field.TypeString, value)
@@ -397,15 +397,15 @@ func (u *ProblemFingerprintUpsert) UpdateTenantKey() *ProblemFingerprintUpsert {
 	return u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *ProblemFingerprintUpsert) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintUpsert {
-	u.Set(problemfingerprint.FieldKnowledgeUnitID, v)
+// SetInsightID sets the "insight_id" field.
+func (u *ProblemFingerprintUpsert) SetInsightID(v uuid.UUID) *ProblemFingerprintUpsert {
+	u.Set(problemfingerprint.FieldInsightID, v)
 	return u
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *ProblemFingerprintUpsert) UpdateKnowledgeUnitID() *ProblemFingerprintUpsert {
-	u.SetExcluded(problemfingerprint.FieldKnowledgeUnitID)
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *ProblemFingerprintUpsert) UpdateInsightID() *ProblemFingerprintUpsert {
+	u.SetExcluded(problemfingerprint.FieldInsightID)
 	return u
 }
 
@@ -600,17 +600,17 @@ func (u *ProblemFingerprintUpsertOne) UpdateTenantKey() *ProblemFingerprintUpser
 	})
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *ProblemFingerprintUpsertOne) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintUpsertOne {
+// SetInsightID sets the "insight_id" field.
+func (u *ProblemFingerprintUpsertOne) SetInsightID(v uuid.UUID) *ProblemFingerprintUpsertOne {
 	return u.Update(func(s *ProblemFingerprintUpsert) {
-		s.SetKnowledgeUnitID(v)
+		s.SetInsightID(v)
 	})
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *ProblemFingerprintUpsertOne) UpdateKnowledgeUnitID() *ProblemFingerprintUpsertOne {
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *ProblemFingerprintUpsertOne) UpdateInsightID() *ProblemFingerprintUpsertOne {
 	return u.Update(func(s *ProblemFingerprintUpsert) {
-		s.UpdateKnowledgeUnitID()
+		s.UpdateInsightID()
 	})
 }
 
@@ -993,17 +993,17 @@ func (u *ProblemFingerprintUpsertBulk) UpdateTenantKey() *ProblemFingerprintUpse
 	})
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *ProblemFingerprintUpsertBulk) SetKnowledgeUnitID(v uuid.UUID) *ProblemFingerprintUpsertBulk {
+// SetInsightID sets the "insight_id" field.
+func (u *ProblemFingerprintUpsertBulk) SetInsightID(v uuid.UUID) *ProblemFingerprintUpsertBulk {
 	return u.Update(func(s *ProblemFingerprintUpsert) {
-		s.SetKnowledgeUnitID(v)
+		s.SetInsightID(v)
 	})
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *ProblemFingerprintUpsertBulk) UpdateKnowledgeUnitID() *ProblemFingerprintUpsertBulk {
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *ProblemFingerprintUpsertBulk) UpdateInsightID() *ProblemFingerprintUpsertBulk {
 	return u.Update(func(s *ProblemFingerprintUpsert) {
-		s.UpdateKnowledgeUnitID()
+		s.UpdateInsightID()
 	})
 }
 

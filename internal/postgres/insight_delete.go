@@ -8,30 +8,30 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/predicate"
 )
 
-// KnowledgeUnitDelete is the builder for deleting a KnowledgeUnit entity.
-type KnowledgeUnitDelete struct {
+// InsightDelete is the builder for deleting a Insight entity.
+type InsightDelete struct {
 	config
 	hooks    []Hook
-	mutation *KnowledgeUnitMutation
+	mutation *InsightMutation
 }
 
-// Where appends a list predicates to the KnowledgeUnitDelete builder.
-func (_d *KnowledgeUnitDelete) Where(ps ...predicate.KnowledgeUnit) *KnowledgeUnitDelete {
+// Where appends a list predicates to the InsightDelete builder.
+func (_d *InsightDelete) Where(ps ...predicate.Insight) *InsightDelete {
 	_d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (_d *KnowledgeUnitDelete) Exec(ctx context.Context) (int, error) {
+func (_d *InsightDelete) Exec(ctx context.Context) (int, error) {
 	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *KnowledgeUnitDelete) ExecX(ctx context.Context) int {
+func (_d *InsightDelete) ExecX(ctx context.Context) int {
 	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
@@ -39,8 +39,8 @@ func (_d *KnowledgeUnitDelete) ExecX(ctx context.Context) int {
 	return n
 }
 
-func (_d *KnowledgeUnitDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(knowledgeunit.Table, sqlgraph.NewFieldSpec(knowledgeunit.FieldID, field.TypeUUID))
+func (_d *InsightDelete) sqlExec(ctx context.Context) (int, error) {
+	_spec := sqlgraph.NewDeleteSpec(insight.Table, sqlgraph.NewFieldSpec(insight.FieldID, field.TypeUUID))
 	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -56,32 +56,32 @@ func (_d *KnowledgeUnitDelete) sqlExec(ctx context.Context) (int, error) {
 	return affected, err
 }
 
-// KnowledgeUnitDeleteOne is the builder for deleting a single KnowledgeUnit entity.
-type KnowledgeUnitDeleteOne struct {
-	_d *KnowledgeUnitDelete
+// InsightDeleteOne is the builder for deleting a single Insight entity.
+type InsightDeleteOne struct {
+	_d *InsightDelete
 }
 
-// Where appends a list predicates to the KnowledgeUnitDelete builder.
-func (_d *KnowledgeUnitDeleteOne) Where(ps ...predicate.KnowledgeUnit) *KnowledgeUnitDeleteOne {
+// Where appends a list predicates to the InsightDelete builder.
+func (_d *InsightDeleteOne) Where(ps ...predicate.Insight) *InsightDeleteOne {
 	_d._d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query.
-func (_d *KnowledgeUnitDeleteOne) Exec(ctx context.Context) error {
+func (_d *InsightDeleteOne) Exec(ctx context.Context) error {
 	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
 	case n == 0:
-		return &NotFoundError{knowledgeunit.Label}
+		return &NotFoundError{insight.Label}
 	default:
 		return nil
 	}
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *KnowledgeUnitDeleteOne) ExecX(ctx context.Context) {
+func (_d *InsightDeleteOne) ExecX(ctx context.Context) {
 	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}

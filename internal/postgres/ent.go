@@ -15,8 +15,8 @@ import (
 	"github.com/loewenthal-corp/consensus/internal/postgres/actor"
 	"github.com/loewenthal-corp/consensus/internal/postgres/auditevent"
 	"github.com/loewenthal-corp/consensus/internal/postgres/graphedge"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/job"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
 	"github.com/loewenthal-corp/consensus/internal/postgres/problemfingerprint"
 	"github.com/loewenthal-corp/consensus/internal/postgres/setting"
 	"github.com/loewenthal-corp/consensus/internal/postgres/tenant"
@@ -84,8 +84,8 @@ func checkColumn(t, c string) error {
 			actor.Table:              actor.ValidColumn,
 			auditevent.Table:         auditevent.ValidColumn,
 			graphedge.Table:          graphedge.ValidColumn,
+			insight.Table:            insight.ValidColumn,
 			job.Table:                job.ValidColumn,
-			knowledgeunit.Table:      knowledgeunit.ValidColumn,
 			problemfingerprint.Table: problemfingerprint.ValidColumn,
 			setting.Table:            setting.ValidColumn,
 			tenant.Table:             tenant.ValidColumn,

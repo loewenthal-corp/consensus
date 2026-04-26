@@ -45,6 +45,18 @@ func (f GraphEdgeFunc) Mutate(ctx context.Context, m postgres.Mutation) (postgre
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *postgres.GraphEdgeMutation", m)
 }
 
+// The InsightFunc type is an adapter to allow the use of ordinary
+// function as Insight mutator.
+type InsightFunc func(context.Context, *postgres.InsightMutation) (postgres.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f InsightFunc) Mutate(ctx context.Context, m postgres.Mutation) (postgres.Value, error) {
+	if mv, ok := m.(*postgres.InsightMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *postgres.InsightMutation", m)
+}
+
 // The JobFunc type is an adapter to allow the use of ordinary
 // function as Job mutator.
 type JobFunc func(context.Context, *postgres.JobMutation) (postgres.Value, error)
@@ -55,18 +67,6 @@ func (f JobFunc) Mutate(ctx context.Context, m postgres.Mutation) (postgres.Valu
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *postgres.JobMutation", m)
-}
-
-// The KnowledgeUnitFunc type is an adapter to allow the use of ordinary
-// function as KnowledgeUnit mutator.
-type KnowledgeUnitFunc func(context.Context, *postgres.KnowledgeUnitMutation) (postgres.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f KnowledgeUnitFunc) Mutate(ctx context.Context, m postgres.Mutation) (postgres.Value, error) {
-	if mv, ok := m.(*postgres.KnowledgeUnitMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *postgres.KnowledgeUnitMutation", m)
 }
 
 // The ProblemFingerprintFunc type is an adapter to allow the use of ordinary

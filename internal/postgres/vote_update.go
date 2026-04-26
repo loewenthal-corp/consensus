@@ -42,16 +42,16 @@ func (_u *VoteUpdate) SetNillableTenantKey(v *string) *VoteUpdate {
 	return _u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_u *VoteUpdate) SetKnowledgeUnitID(v uuid.UUID) *VoteUpdate {
-	_u.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_u *VoteUpdate) SetInsightID(v uuid.UUID) *VoteUpdate {
+	_u.mutation.SetInsightID(v)
 	return _u
 }
 
-// SetNillableKnowledgeUnitID sets the "knowledge_unit_id" field if the given value is not nil.
-func (_u *VoteUpdate) SetNillableKnowledgeUnitID(v *uuid.UUID) *VoteUpdate {
+// SetNillableInsightID sets the "insight_id" field if the given value is not nil.
+func (_u *VoteUpdate) SetNillableInsightID(v *uuid.UUID) *VoteUpdate {
 	if v != nil {
-		_u.SetKnowledgeUnitID(*v)
+		_u.SetInsightID(*v)
 	}
 	return _u
 }
@@ -238,8 +238,8 @@ func (_u *VoteUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.TenantKey(); ok {
 		_spec.SetField(vote.FieldTenantKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(vote.FieldKnowledgeUnitID, field.TypeUUID, value)
+	if value, ok := _u.mutation.InsightID(); ok {
+		_spec.SetField(vote.FieldInsightID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.ActorID(); ok {
 		_spec.SetField(vote.FieldActorID, field.TypeUUID, value)
@@ -308,16 +308,16 @@ func (_u *VoteUpdateOne) SetNillableTenantKey(v *string) *VoteUpdateOne {
 	return _u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_u *VoteUpdateOne) SetKnowledgeUnitID(v uuid.UUID) *VoteUpdateOne {
-	_u.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_u *VoteUpdateOne) SetInsightID(v uuid.UUID) *VoteUpdateOne {
+	_u.mutation.SetInsightID(v)
 	return _u
 }
 
-// SetNillableKnowledgeUnitID sets the "knowledge_unit_id" field if the given value is not nil.
-func (_u *VoteUpdateOne) SetNillableKnowledgeUnitID(v *uuid.UUID) *VoteUpdateOne {
+// SetNillableInsightID sets the "insight_id" field if the given value is not nil.
+func (_u *VoteUpdateOne) SetNillableInsightID(v *uuid.UUID) *VoteUpdateOne {
 	if v != nil {
-		_u.SetKnowledgeUnitID(*v)
+		_u.SetInsightID(*v)
 	}
 	return _u
 }
@@ -534,8 +534,8 @@ func (_u *VoteUpdateOne) sqlSave(ctx context.Context) (_node *Vote, err error) {
 	if value, ok := _u.mutation.TenantKey(); ok {
 		_spec.SetField(vote.FieldTenantKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(vote.FieldKnowledgeUnitID, field.TypeUUID, value)
+	if value, ok := _u.mutation.InsightID(); ok {
+		_spec.SetField(vote.FieldInsightID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.ActorID(); ok {
 		_spec.SetField(vote.FieldActorID, field.TypeUUID, value)

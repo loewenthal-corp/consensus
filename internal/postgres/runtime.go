@@ -9,8 +9,8 @@ import (
 	"github.com/loewenthal-corp/consensus/internal/postgres/actor"
 	"github.com/loewenthal-corp/consensus/internal/postgres/auditevent"
 	"github.com/loewenthal-corp/consensus/internal/postgres/graphedge"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/job"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
 	"github.com/loewenthal-corp/consensus/internal/postgres/problemfingerprint"
 	"github.com/loewenthal-corp/consensus/internal/postgres/schema"
 	"github.com/loewenthal-corp/consensus/internal/postgres/setting"
@@ -252,6 +252,142 @@ func init() {
 	graphedgeDescID := graphedgeFields[0].Descriptor()
 	// graphedge.DefaultID holds the default value on creation for the id field.
 	graphedge.DefaultID = graphedgeDescID.Default.(func() uuid.UUID)
+	insightFields := schema.Insight{}.Fields()
+	_ = insightFields
+	// insightDescTenantKey is the schema descriptor for tenant_key field.
+	insightDescTenantKey := insightFields[1].Descriptor()
+	// insight.DefaultTenantKey holds the default value on creation for the tenant_key field.
+	insight.DefaultTenantKey = insightDescTenantKey.Default.(string)
+	// insight.TenantKeyValidator is a validator for the "tenant_key" field. It is called by the builders before save.
+	insight.TenantKeyValidator = func() func(string) error {
+		validators := insightDescTenantKey.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(tenant_key string) error {
+			for _, fn := range fns {
+				if err := fn(tenant_key); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescTitle is the schema descriptor for title field.
+	insightDescTitle := insightFields[2].Descriptor()
+	// insight.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	insight.TitleValidator = func() func(string) error {
+		validators := insightDescTitle.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(title string) error {
+			for _, fn := range fns {
+				if err := fn(title); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescAnswer is the schema descriptor for answer field.
+	insightDescAnswer := insightFields[4].Descriptor()
+	// insight.AnswerValidator is a validator for the "answer" field. It is called by the builders before save.
+	insight.AnswerValidator = func() func(string) error {
+		validators := insightDescAnswer.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(answer string) error {
+			for _, fn := range fns {
+				if err := fn(answer); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescKind is the schema descriptor for kind field.
+	insightDescKind := insightFields[8].Descriptor()
+	// insight.DefaultKind holds the default value on creation for the kind field.
+	insight.DefaultKind = insightDescKind.Default.(string)
+	// insight.KindValidator is a validator for the "kind" field. It is called by the builders before save.
+	insight.KindValidator = func() func(string) error {
+		validators := insightDescKind.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(kind string) error {
+			for _, fn := range fns {
+				if err := fn(kind); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescSourceRunID is the schema descriptor for source_run_id field.
+	insightDescSourceRunID := insightFields[13].Descriptor()
+	// insight.SourceRunIDValidator is a validator for the "source_run_id" field. It is called by the builders before save.
+	insight.SourceRunIDValidator = insightDescSourceRunID.Validators[0].(func(string) error)
+	// insightDescReviewState is the schema descriptor for review_state field.
+	insightDescReviewState := insightFields[14].Descriptor()
+	// insight.DefaultReviewState holds the default value on creation for the review_state field.
+	insight.DefaultReviewState = insightDescReviewState.Default.(string)
+	// insight.ReviewStateValidator is a validator for the "review_state" field. It is called by the builders before save.
+	insight.ReviewStateValidator = func() func(string) error {
+		validators := insightDescReviewState.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(review_state string) error {
+			for _, fn := range fns {
+				if err := fn(review_state); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescLifecycleState is the schema descriptor for lifecycle_state field.
+	insightDescLifecycleState := insightFields[15].Descriptor()
+	// insight.DefaultLifecycleState holds the default value on creation for the lifecycle_state field.
+	insight.DefaultLifecycleState = insightDescLifecycleState.Default.(string)
+	// insight.LifecycleStateValidator is a validator for the "lifecycle_state" field. It is called by the builders before save.
+	insight.LifecycleStateValidator = func() func(string) error {
+		validators := insightDescLifecycleState.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(lifecycle_state string) error {
+			for _, fn := range fns {
+				if err := fn(lifecycle_state); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// insightDescCreatedAt is the schema descriptor for created_at field.
+	insightDescCreatedAt := insightFields[18].Descriptor()
+	// insight.DefaultCreatedAt holds the default value on creation for the created_at field.
+	insight.DefaultCreatedAt = insightDescCreatedAt.Default.(func() time.Time)
+	// insightDescUpdatedAt is the schema descriptor for updated_at field.
+	insightDescUpdatedAt := insightFields[19].Descriptor()
+	// insight.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	insight.DefaultUpdatedAt = insightDescUpdatedAt.Default.(func() time.Time)
+	// insight.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	insight.UpdateDefaultUpdatedAt = insightDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// insightDescID is the schema descriptor for id field.
+	insightDescID := insightFields[0].Descriptor()
+	// insight.DefaultID holds the default value on creation for the id field.
+	insight.DefaultID = insightDescID.Default.(func() uuid.UUID)
 	jobFields := schema.Job{}.Fields()
 	_ = jobFields
 	// jobDescTenantKey is the schema descriptor for tenant_key field.
@@ -334,142 +470,6 @@ func init() {
 	jobDescID := jobFields[0].Descriptor()
 	// job.DefaultID holds the default value on creation for the id field.
 	job.DefaultID = jobDescID.Default.(func() uuid.UUID)
-	knowledgeunitFields := schema.KnowledgeUnit{}.Fields()
-	_ = knowledgeunitFields
-	// knowledgeunitDescTenantKey is the schema descriptor for tenant_key field.
-	knowledgeunitDescTenantKey := knowledgeunitFields[1].Descriptor()
-	// knowledgeunit.DefaultTenantKey holds the default value on creation for the tenant_key field.
-	knowledgeunit.DefaultTenantKey = knowledgeunitDescTenantKey.Default.(string)
-	// knowledgeunit.TenantKeyValidator is a validator for the "tenant_key" field. It is called by the builders before save.
-	knowledgeunit.TenantKeyValidator = func() func(string) error {
-		validators := knowledgeunitDescTenantKey.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(tenant_key string) error {
-			for _, fn := range fns {
-				if err := fn(tenant_key); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescTitle is the schema descriptor for title field.
-	knowledgeunitDescTitle := knowledgeunitFields[2].Descriptor()
-	// knowledgeunit.TitleValidator is a validator for the "title" field. It is called by the builders before save.
-	knowledgeunit.TitleValidator = func() func(string) error {
-		validators := knowledgeunitDescTitle.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(title string) error {
-			for _, fn := range fns {
-				if err := fn(title); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescSummary is the schema descriptor for summary field.
-	knowledgeunitDescSummary := knowledgeunitFields[4].Descriptor()
-	// knowledgeunit.SummaryValidator is a validator for the "summary" field. It is called by the builders before save.
-	knowledgeunit.SummaryValidator = func() func(string) error {
-		validators := knowledgeunitDescSummary.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(summary string) error {
-			for _, fn := range fns {
-				if err := fn(summary); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescKind is the schema descriptor for kind field.
-	knowledgeunitDescKind := knowledgeunitFields[8].Descriptor()
-	// knowledgeunit.DefaultKind holds the default value on creation for the kind field.
-	knowledgeunit.DefaultKind = knowledgeunitDescKind.Default.(string)
-	// knowledgeunit.KindValidator is a validator for the "kind" field. It is called by the builders before save.
-	knowledgeunit.KindValidator = func() func(string) error {
-		validators := knowledgeunitDescKind.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(kind string) error {
-			for _, fn := range fns {
-				if err := fn(kind); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescSourceRunID is the schema descriptor for source_run_id field.
-	knowledgeunitDescSourceRunID := knowledgeunitFields[13].Descriptor()
-	// knowledgeunit.SourceRunIDValidator is a validator for the "source_run_id" field. It is called by the builders before save.
-	knowledgeunit.SourceRunIDValidator = knowledgeunitDescSourceRunID.Validators[0].(func(string) error)
-	// knowledgeunitDescReviewState is the schema descriptor for review_state field.
-	knowledgeunitDescReviewState := knowledgeunitFields[14].Descriptor()
-	// knowledgeunit.DefaultReviewState holds the default value on creation for the review_state field.
-	knowledgeunit.DefaultReviewState = knowledgeunitDescReviewState.Default.(string)
-	// knowledgeunit.ReviewStateValidator is a validator for the "review_state" field. It is called by the builders before save.
-	knowledgeunit.ReviewStateValidator = func() func(string) error {
-		validators := knowledgeunitDescReviewState.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(review_state string) error {
-			for _, fn := range fns {
-				if err := fn(review_state); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescLifecycleState is the schema descriptor for lifecycle_state field.
-	knowledgeunitDescLifecycleState := knowledgeunitFields[15].Descriptor()
-	// knowledgeunit.DefaultLifecycleState holds the default value on creation for the lifecycle_state field.
-	knowledgeunit.DefaultLifecycleState = knowledgeunitDescLifecycleState.Default.(string)
-	// knowledgeunit.LifecycleStateValidator is a validator for the "lifecycle_state" field. It is called by the builders before save.
-	knowledgeunit.LifecycleStateValidator = func() func(string) error {
-		validators := knowledgeunitDescLifecycleState.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(lifecycle_state string) error {
-			for _, fn := range fns {
-				if err := fn(lifecycle_state); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// knowledgeunitDescCreatedAt is the schema descriptor for created_at field.
-	knowledgeunitDescCreatedAt := knowledgeunitFields[18].Descriptor()
-	// knowledgeunit.DefaultCreatedAt holds the default value on creation for the created_at field.
-	knowledgeunit.DefaultCreatedAt = knowledgeunitDescCreatedAt.Default.(func() time.Time)
-	// knowledgeunitDescUpdatedAt is the schema descriptor for updated_at field.
-	knowledgeunitDescUpdatedAt := knowledgeunitFields[19].Descriptor()
-	// knowledgeunit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	knowledgeunit.DefaultUpdatedAt = knowledgeunitDescUpdatedAt.Default.(func() time.Time)
-	// knowledgeunit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	knowledgeunit.UpdateDefaultUpdatedAt = knowledgeunitDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// knowledgeunitDescID is the schema descriptor for id field.
-	knowledgeunitDescID := knowledgeunitFields[0].Descriptor()
-	// knowledgeunit.DefaultID holds the default value on creation for the id field.
-	knowledgeunit.DefaultID = knowledgeunitDescID.Default.(func() uuid.UUID)
 	problemfingerprintFields := schema.ProblemFingerprint{}.Fields()
 	_ = problemfingerprintFields
 	// problemfingerprintDescTenantKey is the schema descriptor for tenant_key field.

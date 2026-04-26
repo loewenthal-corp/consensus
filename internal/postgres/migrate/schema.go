@@ -112,6 +112,52 @@ var (
 			},
 		},
 	}
+	// InsightsColumns holds the columns for the "insights" table.
+	InsightsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "tenant_key", Type: field.TypeString, Size: 255, Default: "default"},
+		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "problem", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "answer", Type: field.TypeString, Size: 1000},
+		{Name: "example", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "detail", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "action", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "kind", Type: field.TypeString, Size: 100, Default: "insight"},
+		{Name: "tags", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "context", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "links", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_by_actor_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "source_run_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "review_state", Type: field.TypeString, Size: 100, Default: "approved"},
+		{Name: "lifecycle_state", Type: field.TypeString, Size: 100, Default: "active"},
+		{Name: "superseded_by_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "last_confirmed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// InsightsTable holds the schema information for the "insights" table.
+	InsightsTable = &schema.Table{
+		Name:       "insights",
+		Columns:    InsightsColumns,
+		PrimaryKey: []*schema.Column{InsightsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "insight_tenant_key",
+				Unique:  false,
+				Columns: []*schema.Column{InsightsColumns[1]},
+			},
+			{
+				Name:    "insight_tenant_key_review_state",
+				Unique:  false,
+				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[14]},
+			},
+			{
+				Name:    "insight_tenant_key_lifecycle_state",
+				Unique:  false,
+				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[15]},
+			},
+		},
+	}
 	// JobsColumns holds the columns for the "jobs" table.
 	JobsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -148,57 +194,11 @@ var (
 			},
 		},
 	}
-	// KnowledgeUnitsColumns holds the columns for the "knowledge_units" table.
-	KnowledgeUnitsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "tenant_key", Type: field.TypeString, Size: 255, Default: "default"},
-		{Name: "title", Type: field.TypeString, Size: 255},
-		{Name: "problem", Type: field.TypeString, Nullable: true, Size: 2147483647},
-		{Name: "summary", Type: field.TypeString, Size: 1000},
-		{Name: "example", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "detail", Type: field.TypeString, Nullable: true, Size: 2147483647},
-		{Name: "action", Type: field.TypeString, Nullable: true, Size: 2147483647},
-		{Name: "kind", Type: field.TypeString, Size: 100, Default: "finding"},
-		{Name: "labels", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "context", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "evidence_refs", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "created_by_actor_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "source_run_id", Type: field.TypeString, Nullable: true, Size: 255},
-		{Name: "review_state", Type: field.TypeString, Size: 100, Default: "approved"},
-		{Name: "lifecycle_state", Type: field.TypeString, Size: 100, Default: "active"},
-		{Name: "superseded_by_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "last_confirmed_at", Type: field.TypeTime, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-	}
-	// KnowledgeUnitsTable holds the schema information for the "knowledge_units" table.
-	KnowledgeUnitsTable = &schema.Table{
-		Name:       "knowledge_units",
-		Columns:    KnowledgeUnitsColumns,
-		PrimaryKey: []*schema.Column{KnowledgeUnitsColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "knowledgeunit_tenant_key",
-				Unique:  false,
-				Columns: []*schema.Column{KnowledgeUnitsColumns[1]},
-			},
-			{
-				Name:    "knowledgeunit_tenant_key_review_state",
-				Unique:  false,
-				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[14]},
-			},
-			{
-				Name:    "knowledgeunit_tenant_key_lifecycle_state",
-				Unique:  false,
-				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[15]},
-			},
-		},
-	}
 	// ProblemFingerprintsColumns holds the columns for the "problem_fingerprints" table.
 	ProblemFingerprintsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "tenant_key", Type: field.TypeString, Size: 255, Default: "default"},
-		{Name: "knowledge_unit_id", Type: field.TypeUUID},
+		{Name: "insight_id", Type: field.TypeUUID},
 		{Name: "error_hash", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "command", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "toolchain", Type: field.TypeString, Nullable: true, Size: 255},
@@ -220,7 +220,7 @@ var (
 				Columns: []*schema.Column{ProblemFingerprintsColumns[1]},
 			},
 			{
-				Name:    "problemfingerprint_tenant_key_knowledge_unit_id",
+				Name:    "problemfingerprint_tenant_key_insight_id",
 				Unique:  false,
 				Columns: []*schema.Column{ProblemFingerprintsColumns[1], ProblemFingerprintsColumns[2]},
 			},
@@ -278,7 +278,7 @@ var (
 	VotesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "tenant_key", Type: field.TypeString, Size: 255, Default: "default"},
-		{Name: "knowledge_unit_id", Type: field.TypeUUID},
+		{Name: "insight_id", Type: field.TypeUUID},
 		{Name: "actor_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "problem_fingerprint_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "outcome", Type: field.TypeString, Size: 100},
@@ -299,7 +299,7 @@ var (
 				Columns: []*schema.Column{VotesColumns[1]},
 			},
 			{
-				Name:    "vote_tenant_key_knowledge_unit_id",
+				Name:    "vote_tenant_key_insight_id",
 				Unique:  false,
 				Columns: []*schema.Column{VotesColumns[1], VotesColumns[2]},
 			},
@@ -315,8 +315,8 @@ var (
 		ActorsTable,
 		AuditEventsTable,
 		GraphEdgesTable,
+		InsightsTable,
 		JobsTable,
-		KnowledgeUnitsTable,
 		ProblemFingerprintsTable,
 		SettingsTable,
 		TenantsTable,

@@ -22,7 +22,7 @@ func (Vote) Fields() []ent.Field {
 			Default("default").
 			NotEmpty().
 			MaxLen(255),
-		field.UUID("knowledge_unit_id", uuid.UUID{}),
+		field.UUID("insight_id", uuid.UUID{}),
 		field.UUID("actor_id", uuid.UUID{}).
 			Optional().
 			Nillable(),
@@ -49,7 +49,7 @@ func (Vote) Fields() []ent.Field {
 func (Vote) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_key"),
-		index.Fields("tenant_key", "knowledge_unit_id"),
+		index.Fields("tenant_key", "insight_id"),
 		index.Fields("tenant_key", "outcome"),
 	}
 }

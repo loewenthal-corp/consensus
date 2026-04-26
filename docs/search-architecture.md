@@ -47,7 +47,7 @@ the storage and ranking layer with Postgres-native extensions and Go services.
 ## Current State
 
 The current `InsightService.Search` implementation performs case-insensitive
-substring matching across the main knowledge fields and orders results by
+substring matching across the main insight fields and orders results by
 `updated_at`. That is sufficient for a bootstrap implementation, but it has
 several limitations:
 
@@ -61,8 +61,8 @@ several limitations:
 
 The existing data model already has useful primitives:
 
-- `knowledge_units` store title, problem, answer, detail, action, examples,
-  labels, context, evidence links, review state, lifecycle state, and freshness.
+- `insights` store title, problem, answer, detail, action, examples, tags,
+  context, links, review state, lifecycle state, and freshness.
 - `votes` store outcomes such as `solved`, `helped`, `did_not_work`, `stale`,
   and `incorrect`.
 - `problem_fingerprints` store exact-ish matching fields such as error hashes,
@@ -116,10 +116,10 @@ can grow enough that chunking improves vector quality and reranking cost.
 Proposed table:
 
 ```sql
-CREATE TABLE knowledge_search_chunks (
+CREATE TABLE insight_search_chunks (
     id uuid PRIMARY KEY,
     tenant_key text NOT NULL,
-    knowledge_unit_id uuid NOT NULL,
+    insight_id uuid NOT NULL,
     chunk_kind text NOT NULL,
     chunk_ordinal int NOT NULL,
     chunk_text text NOT NULL,
@@ -158,8 +158,8 @@ If a single expression index is used, construct an immutable search document
 from normalized fields:
 
 ```sql
-CREATE INDEX knowledge_chunks_bm25_idx
-ON knowledge_search_chunks
+CREATE INDEX insight_chunks_bm25_idx
+ON insight_search_chunks
 USING bm25 ((chunk_kind || ' ' || chunk_text))
 WITH (text_config = 'english');
 ```
@@ -172,14 +172,14 @@ shape and fuse them as independent lexical lists.
 Fallback index:
 
 ```sql
-ALTER TABLE knowledge_search_chunks
+ALTER TABLE insight_search_chunks
 ADD COLUMN search_vector tsvector
 GENERATED ALWAYS AS (
     to_tsvector('english', coalesce(chunk_kind, '') || ' ' || coalesce(chunk_text, ''))
 ) STORED;
 
-CREATE INDEX knowledge_chunks_search_vector_idx
-ON knowledge_search_chunks
+CREATE INDEX insight_chunks_search_vector_idx
+ON insight_search_chunks
 USING gin (search_vector);
 ```
 
@@ -188,8 +188,8 @@ USING gin (search_vector);
 Use cosine distance by default:
 
 ```sql
-CREATE INDEX knowledge_chunks_embedding_hnsw_idx
-ON knowledge_search_chunks
+CREATE INDEX insight_chunks_embedding_hnsw_idx
+ON insight_search_chunks
 USING hnsw (embedding vector_cosine_ops);
 ```
 
@@ -203,11 +203,11 @@ Search should always be tenant scoped. Lifecycle and review filters should be
 cheap:
 
 ```sql
-CREATE INDEX knowledge_units_search_scope_idx
-ON knowledge_units (tenant_key, lifecycle_state, review_state);
+CREATE INDEX insights_search_scope_idx
+ON insights (tenant_key, lifecycle_state, review_state);
 
-CREATE INDEX knowledge_chunks_scope_idx
-ON knowledge_search_chunks (tenant_key, knowledge_unit_id);
+CREATE INDEX insight_chunks_scope_idx
+ON insight_search_chunks (tenant_key, insight_id);
 ```
 
 Tags and structured context are currently JSON. For early versions, JSONB
@@ -481,7 +481,7 @@ Track at least:
 ### Phase 3: Vector Search
 
 - Add `pgvector` to local and test Postgres images.
-- Add embeddings to `knowledge_search_chunks`.
+- Add embeddings to `insight_search_chunks`.
 - Add an embedder interface and background embedding job.
 - Add vector candidates and RRF fusion.
 

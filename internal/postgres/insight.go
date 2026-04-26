@@ -11,11 +11,11 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 )
 
-// KnowledgeUnit is the model entity for the KnowledgeUnit schema.
-type KnowledgeUnit struct {
+// Insight is the model entity for the Insight schema.
+type Insight struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
@@ -25,8 +25,8 @@ type KnowledgeUnit struct {
 	Title string `json:"title,omitempty"`
 	// Problem holds the value of the "problem" field.
 	Problem string `json:"problem,omitempty"`
-	// Summary holds the value of the "summary" field.
-	Summary string `json:"summary,omitempty"`
+	// Answer holds the value of the "answer" field.
+	Answer string `json:"answer,omitempty"`
 	// Example holds the value of the "example" field.
 	Example map[string]string `json:"example,omitempty"`
 	// Detail holds the value of the "detail" field.
@@ -35,12 +35,12 @@ type KnowledgeUnit struct {
 	Action string `json:"action,omitempty"`
 	// Kind holds the value of the "kind" field.
 	Kind string `json:"kind,omitempty"`
-	// Labels holds the value of the "labels" field.
-	Labels []string `json:"labels,omitempty"`
+	// Tags holds the value of the "tags" field.
+	Tags []string `json:"tags,omitempty"`
 	// Context holds the value of the "context" field.
 	Context map[string]string `json:"context,omitempty"`
-	// EvidenceRefs holds the value of the "evidence_refs" field.
-	EvidenceRefs []map[string]string `json:"evidence_refs,omitempty"`
+	// Links holds the value of the "links" field.
+	Links []map[string]string `json:"links,omitempty"`
 	// CreatedByActorID holds the value of the "created_by_actor_id" field.
 	CreatedByActorID *uuid.UUID `json:"created_by_actor_id,omitempty"`
 	// SourceRunID holds the value of the "source_run_id" field.
@@ -61,19 +61,19 @@ type KnowledgeUnit struct {
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*KnowledgeUnit) scanValues(columns []string) ([]any, error) {
+func (*Insight) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case knowledgeunit.FieldCreatedByActorID, knowledgeunit.FieldSupersededByID:
+		case insight.FieldCreatedByActorID, insight.FieldSupersededByID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case knowledgeunit.FieldExample, knowledgeunit.FieldLabels, knowledgeunit.FieldContext, knowledgeunit.FieldEvidenceRefs:
+		case insight.FieldExample, insight.FieldTags, insight.FieldContext, insight.FieldLinks:
 			values[i] = new([]byte)
-		case knowledgeunit.FieldTenantKey, knowledgeunit.FieldTitle, knowledgeunit.FieldProblem, knowledgeunit.FieldSummary, knowledgeunit.FieldDetail, knowledgeunit.FieldAction, knowledgeunit.FieldKind, knowledgeunit.FieldSourceRunID, knowledgeunit.FieldReviewState, knowledgeunit.FieldLifecycleState:
+		case insight.FieldTenantKey, insight.FieldTitle, insight.FieldProblem, insight.FieldAnswer, insight.FieldDetail, insight.FieldAction, insight.FieldKind, insight.FieldSourceRunID, insight.FieldReviewState, insight.FieldLifecycleState:
 			values[i] = new(sql.NullString)
-		case knowledgeunit.FieldLastConfirmedAt, knowledgeunit.FieldCreatedAt, knowledgeunit.FieldUpdatedAt:
+		case insight.FieldLastConfirmedAt, insight.FieldCreatedAt, insight.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case knowledgeunit.FieldID:
+		case insight.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -83,44 +83,44 @@ func (*KnowledgeUnit) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the KnowledgeUnit fields.
-func (_m *KnowledgeUnit) assignValues(columns []string, values []any) error {
+// to the Insight fields.
+func (_m *Insight) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case knowledgeunit.FieldID:
+		case insight.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case knowledgeunit.FieldTenantKey:
+		case insight.FieldTenantKey:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_key", values[i])
 			} else if value.Valid {
 				_m.TenantKey = value.String
 			}
-		case knowledgeunit.FieldTitle:
+		case insight.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
 				_m.Title = value.String
 			}
-		case knowledgeunit.FieldProblem:
+		case insight.FieldProblem:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field problem", values[i])
 			} else if value.Valid {
 				_m.Problem = value.String
 			}
-		case knowledgeunit.FieldSummary:
+		case insight.FieldAnswer:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field summary", values[i])
+				return fmt.Errorf("unexpected type %T for field answer", values[i])
 			} else if value.Valid {
-				_m.Summary = value.String
+				_m.Answer = value.String
 			}
-		case knowledgeunit.FieldExample:
+		case insight.FieldExample:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field example", values[i])
 			} else if value != nil && len(*value) > 0 {
@@ -128,33 +128,33 @@ func (_m *KnowledgeUnit) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field example: %w", err)
 				}
 			}
-		case knowledgeunit.FieldDetail:
+		case insight.FieldDetail:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field detail", values[i])
 			} else if value.Valid {
 				_m.Detail = value.String
 			}
-		case knowledgeunit.FieldAction:
+		case insight.FieldAction:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field action", values[i])
 			} else if value.Valid {
 				_m.Action = value.String
 			}
-		case knowledgeunit.FieldKind:
+		case insight.FieldKind:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kind", values[i])
 			} else if value.Valid {
 				_m.Kind = value.String
 			}
-		case knowledgeunit.FieldLabels:
+		case insight.FieldTags:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field labels", values[i])
+				return fmt.Errorf("unexpected type %T for field tags", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Labels); err != nil {
-					return fmt.Errorf("unmarshal field labels: %w", err)
+				if err := json.Unmarshal(*value, &_m.Tags); err != nil {
+					return fmt.Errorf("unmarshal field tags: %w", err)
 				}
 			}
-		case knowledgeunit.FieldContext:
+		case insight.FieldContext:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field context", values[i])
 			} else if value != nil && len(*value) > 0 {
@@ -162,61 +162,61 @@ func (_m *KnowledgeUnit) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field context: %w", err)
 				}
 			}
-		case knowledgeunit.FieldEvidenceRefs:
+		case insight.FieldLinks:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field evidence_refs", values[i])
+				return fmt.Errorf("unexpected type %T for field links", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.EvidenceRefs); err != nil {
-					return fmt.Errorf("unmarshal field evidence_refs: %w", err)
+				if err := json.Unmarshal(*value, &_m.Links); err != nil {
+					return fmt.Errorf("unmarshal field links: %w", err)
 				}
 			}
-		case knowledgeunit.FieldCreatedByActorID:
+		case insight.FieldCreatedByActorID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field created_by_actor_id", values[i])
 			} else if value.Valid {
 				_m.CreatedByActorID = new(uuid.UUID)
 				*_m.CreatedByActorID = *value.S.(*uuid.UUID)
 			}
-		case knowledgeunit.FieldSourceRunID:
+		case insight.FieldSourceRunID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field source_run_id", values[i])
 			} else if value.Valid {
 				_m.SourceRunID = new(string)
 				*_m.SourceRunID = value.String
 			}
-		case knowledgeunit.FieldReviewState:
+		case insight.FieldReviewState:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field review_state", values[i])
 			} else if value.Valid {
 				_m.ReviewState = value.String
 			}
-		case knowledgeunit.FieldLifecycleState:
+		case insight.FieldLifecycleState:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field lifecycle_state", values[i])
 			} else if value.Valid {
 				_m.LifecycleState = value.String
 			}
-		case knowledgeunit.FieldSupersededByID:
+		case insight.FieldSupersededByID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field superseded_by_id", values[i])
 			} else if value.Valid {
 				_m.SupersededByID = new(uuid.UUID)
 				*_m.SupersededByID = *value.S.(*uuid.UUID)
 			}
-		case knowledgeunit.FieldLastConfirmedAt:
+		case insight.FieldLastConfirmedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_confirmed_at", values[i])
 			} else if value.Valid {
 				_m.LastConfirmedAt = new(time.Time)
 				*_m.LastConfirmedAt = value.Time
 			}
-		case knowledgeunit.FieldCreatedAt:
+		case insight.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case knowledgeunit.FieldUpdatedAt:
+		case insight.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
@@ -229,34 +229,34 @@ func (_m *KnowledgeUnit) assignValues(columns []string, values []any) error {
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the KnowledgeUnit.
+// Value returns the ent.Value that was dynamically selected and assigned to the Insight.
 // This includes values selected through modifiers, order, etc.
-func (_m *KnowledgeUnit) Value(name string) (ent.Value, error) {
+func (_m *Insight) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// Update returns a builder for updating this KnowledgeUnit.
-// Note that you need to call KnowledgeUnit.Unwrap() before calling this method if this KnowledgeUnit
+// Update returns a builder for updating this Insight.
+// Note that you need to call Insight.Unwrap() before calling this method if this Insight
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *KnowledgeUnit) Update() *KnowledgeUnitUpdateOne {
-	return NewKnowledgeUnitClient(_m.config).UpdateOne(_m)
+func (_m *Insight) Update() *InsightUpdateOne {
+	return NewInsightClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the KnowledgeUnit entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the Insight entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *KnowledgeUnit) Unwrap() *KnowledgeUnit {
+func (_m *Insight) Unwrap() *Insight {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("postgres: KnowledgeUnit is not a transactional entity")
+		panic("postgres: Insight is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *KnowledgeUnit) String() string {
+func (_m *Insight) String() string {
 	var builder strings.Builder
-	builder.WriteString("KnowledgeUnit(")
+	builder.WriteString("Insight(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("tenant_key=")
 	builder.WriteString(_m.TenantKey)
@@ -267,8 +267,8 @@ func (_m *KnowledgeUnit) String() string {
 	builder.WriteString("problem=")
 	builder.WriteString(_m.Problem)
 	builder.WriteString(", ")
-	builder.WriteString("summary=")
-	builder.WriteString(_m.Summary)
+	builder.WriteString("answer=")
+	builder.WriteString(_m.Answer)
 	builder.WriteString(", ")
 	builder.WriteString("example=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Example))
@@ -282,14 +282,14 @@ func (_m *KnowledgeUnit) String() string {
 	builder.WriteString("kind=")
 	builder.WriteString(_m.Kind)
 	builder.WriteString(", ")
-	builder.WriteString("labels=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Labels))
+	builder.WriteString("tags=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Tags))
 	builder.WriteString(", ")
 	builder.WriteString("context=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Context))
 	builder.WriteString(", ")
-	builder.WriteString("evidence_refs=")
-	builder.WriteString(fmt.Sprintf("%v", _m.EvidenceRefs))
+	builder.WriteString("links=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Links))
 	builder.WriteString(", ")
 	if v := _m.CreatedByActorID; v != nil {
 		builder.WriteString("created_by_actor_id=")
@@ -326,5 +326,5 @@ func (_m *KnowledgeUnit) String() string {
 	return builder.String()
 }
 
-// KnowledgeUnits is a parsable slice of KnowledgeUnit.
-type KnowledgeUnits []*KnowledgeUnit
+// Insights is a parsable slice of Insight.
+type Insights []*Insight

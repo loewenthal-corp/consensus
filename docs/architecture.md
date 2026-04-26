@@ -10,7 +10,7 @@ philosophy, MCP design, data model, federation direction, and operational model.
 ## Product Thesis
 
 Agents are increasingly doing the work that used to generate public Q&A,
-internal runbooks, and tribal knowledge. The hard-won lesson from one agent
+internal runbooks, and tribal context. The hard-won lesson from one agent
 thread rarely survives as reusable context for the next agent. The result is
 repeated debugging, repeated failed tool calls, repeated CI failures, and
 repeated token spend.
@@ -810,7 +810,7 @@ prior art.
 Observed CQ design from the public repository and docs:
 
 - CQ describes itself as an open standard for shared agent learning where agents
-  find, share, and confirm collective knowledge.
+  find, share, and confirm reusable insights.
 - It supports Claude Code plugin installation and host-specific installation for
   OpenCode, Cursor, and Windsurf.
 - The architecture spans an agent/plugin layer, a local MCP server process, a

@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/postgres"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/predicate"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -42,18 +42,18 @@ func (s *Service) ListRecentInsights(ctx context.Context, limit int) ([]*consens
 		limit = 25
 	}
 
-	units, err := s.db.KnowledgeUnit.Query().
-		Where(knowledgeunit.TenantKey(defaultTenantKey)).
-		Order(postgres.Desc(knowledgeunit.FieldUpdatedAt)).
+	insights, err := s.db.Insight.Query().
+		Where(insight.TenantKey(defaultTenantKey)).
+		Order(postgres.Desc(insight.FieldUpdatedAt)).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list recent insights: %w", err)
 	}
 
-	out := make([]*consensusv1.Insight, 0, len(units))
-	for _, unit := range units {
-		out = append(out, toProtoInsight(unit))
+	out := make([]*consensusv1.Insight, 0, len(insights))
+	for _, item := range insights {
+		out = append(out, toProtoInsight(item))
 	}
 	return out, nil
 }
@@ -69,24 +69,24 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSea
 		limit = 10
 	}
 
-	query := s.db.KnowledgeUnit.Query().
+	query := s.db.Insight.Query().
 		Where(
-			knowledgeunit.TenantKey(defaultTenantKey),
-			knowledgeunit.LifecycleState("active"),
-			knowledgeunit.Or(insightTextPredicates(rawQuery)...),
+			insight.TenantKey(defaultTenantKey),
+			insight.LifecycleState("active"),
+			insight.Or(insightTextPredicates(rawQuery)...),
 		).
 		Limit(limit).
-		Order(postgres.Desc(knowledgeunit.FieldUpdatedAt))
+		Order(postgres.Desc(insight.FieldUpdatedAt))
 
-	units, err := query.All(ctx)
+	insights, err := query.All(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("search insights: %w", err))
 	}
 
-	results := make([]*consensusv1.InsightSearchResult, 0, len(units))
-	for _, unit := range units {
+	results := make([]*consensusv1.InsightSearchResult, 0, len(insights))
+	for _, item := range insights {
 		results = append(results, &consensusv1.InsightSearchResult{
-			Insight:        toProtoInsight(unit),
+			Insight:        toProtoInsight(item),
 			Score:          1,
 			RankReason:     "matched text fields",
 			MatchedSignals: []string{"text"},
@@ -95,7 +95,7 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSea
 	return &consensusv1.InsightServiceSearchResponse{Results: results}, nil
 }
 
-func insightTextPredicates(query string) []predicate.KnowledgeUnit {
+func insightTextPredicates(query string) []predicate.Insight {
 	seen := make(map[string]struct{})
 	terms := make([]string, 0, 1+len(strings.Fields(query)))
 
@@ -117,14 +117,14 @@ func insightTextPredicates(query string) []predicate.KnowledgeUnit {
 		addTerm(term)
 	}
 
-	predicates := make([]predicate.KnowledgeUnit, 0, len(terms)*5)
+	predicates := make([]predicate.Insight, 0, len(terms)*5)
 	for _, term := range terms {
 		predicates = append(predicates,
-			knowledgeunit.TitleContainsFold(term),
-			knowledgeunit.ProblemContainsFold(term),
-			knowledgeunit.SummaryContainsFold(term),
-			knowledgeunit.DetailContainsFold(term),
-			knowledgeunit.ActionContainsFold(term),
+			insight.TitleContainsFold(term),
+			insight.ProblemContainsFold(term),
+			insight.AnswerContainsFold(term),
+			insight.DetailContainsFold(term),
+			insight.ActionContainsFold(term),
 		)
 	}
 	return predicates
@@ -136,8 +136,8 @@ func (s *Service) Get(ctx context.Context, req *consensusv1.InsightServiceGetReq
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	unit, err := s.db.KnowledgeUnit.Query().
-		Where(knowledgeunit.TenantKey(defaultTenantKey), knowledgeunit.ID(id)).
+	item, err := s.db.Insight.Query().
+		Where(insight.TenantKey(defaultTenantKey), insight.ID(id)).
 		Only(ctx)
 	if err != nil {
 		if postgres.IsNotFound(err) {
@@ -145,29 +145,29 @@ func (s *Service) Get(ctx context.Context, req *consensusv1.InsightServiceGetReq
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get insight: %w", err))
 	}
-	return &consensusv1.InsightServiceGetResponse{Insight: toProtoInsight(unit)}, nil
+	return &consensusv1.InsightServiceGetResponse{Insight: toProtoInsight(item)}, nil
 }
 
 func (s *Service) Create(ctx context.Context, req *consensusv1.InsightServiceCreateRequest) (*consensusv1.InsightServiceCreateResponse, error) {
-	unit, err := s.db.KnowledgeUnit.Create().
+	item, err := s.db.Insight.Create().
 		SetTenantKey(defaultTenantKey).
 		SetTitle(req.GetTitle()).
 		SetProblem(req.GetProblem()).
-		SetSummary(req.GetAnswer()).
+		SetAnswer(req.GetAnswer()).
 		SetExample(insightExampleToJSON(req.GetExample())).
 		SetDetail(req.GetDetail()).
 		SetAction(req.GetAction()).
 		SetKind(defaultString(req.GetKind(), "insight")).
-		SetLabels(req.GetTags()).
+		SetTags(req.GetTags()).
 		SetContext(req.GetContext()).
-		SetEvidenceRefs(insightLinksToJSON(req.GetLinks())).
+		SetLinks(insightLinksToJSON(req.GetLinks())).
 		Save(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create insight: %w", err))
 	}
 
 	return &consensusv1.InsightServiceCreateResponse{
-		Insight:       toProtoInsight(unit),
+		Insight:       toProtoInsight(item),
 		PendingReview: false,
 	}, nil
 }
@@ -178,7 +178,7 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpd
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid id: %w", err))
 	}
 
-	update := s.db.KnowledgeUnit.UpdateOneID(id)
+	update := s.db.Insight.UpdateOneID(id)
 	if req.GetTitle() != "" {
 		update.SetTitle(req.GetTitle())
 	}
@@ -186,7 +186,7 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpd
 		update.SetProblem(req.GetProblem())
 	}
 	if req.GetAnswer() != "" {
-		update.SetSummary(req.GetAnswer())
+		update.SetAnswer(req.GetAnswer())
 	}
 	if req.GetExample() != nil {
 		update.SetExample(insightExampleToJSON(req.GetExample()))
@@ -201,23 +201,23 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpd
 		update.SetKind(req.GetKind())
 	}
 	if req.GetTags() != nil {
-		update.SetLabels(req.GetTags())
+		update.SetTags(req.GetTags())
 	}
 	if req.GetContext() != nil {
 		update.SetContext(req.GetContext())
 	}
 	if req.GetLinks() != nil {
-		update.SetEvidenceRefs(insightLinksToJSON(req.GetLinks()))
+		update.SetLinks(insightLinksToJSON(req.GetLinks()))
 	}
 
-	unit, err := update.Save(ctx)
+	item, err := update.Save(ctx)
 	if err != nil {
 		if postgres.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("insight not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update insight: %w", err))
 	}
-	return &consensusv1.InsightServiceUpdateResponse{Insight: toProtoInsight(unit)}, nil
+	return &consensusv1.InsightServiceUpdateResponse{Insight: toProtoInsight(item)}, nil
 }
 
 func (s *Service) RecordOutcome(ctx context.Context, req *consensusv1.InsightServiceRecordOutcomeRequest) (*consensusv1.InsightServiceRecordOutcomeResponse, error) {
@@ -233,7 +233,7 @@ func (s *Service) RecordOutcome(ctx context.Context, req *consensusv1.InsightSer
 
 	created, err := s.db.Vote.Create().
 		SetTenantKey(defaultTenantKey).
-		SetKnowledgeUnitID(insightID).
+		SetInsightID(insightID).
 		SetOutcome(outcome).
 		SetConfidence(req.GetConfidence()).
 		SetRationale(req.GetRationale()).
@@ -265,29 +265,29 @@ func parseLocalInsightRef(ref string) (uuid.UUID, error) {
 	return id, nil
 }
 
-func toProtoInsight(unit *postgres.KnowledgeUnit) *consensusv1.Insight {
-	if unit == nil {
+func toProtoInsight(item *postgres.Insight) *consensusv1.Insight {
+	if item == nil {
 		return nil
 	}
 	out := &consensusv1.Insight{
-		Id:             unit.ID.String(),
-		Title:          unit.Title,
-		Problem:        unit.Problem,
-		Answer:         unit.Summary,
-		Example:        insightExampleFromJSON(unit.Example),
-		Detail:         unit.Detail,
-		Action:         unit.Action,
-		Kind:           unit.Kind,
-		Tags:           unit.Labels,
-		Context:        unit.Context,
-		Links:          insightLinksFromJSON(unit.EvidenceRefs),
-		ReviewState:    unit.ReviewState,
-		LifecycleState: unit.LifecycleState,
-		CreatedAt:      timestamppb.New(unit.CreatedAt),
-		UpdatedAt:      timestamppb.New(unit.UpdatedAt),
+		Id:             item.ID.String(),
+		Title:          item.Title,
+		Problem:        item.Problem,
+		Answer:         item.Answer,
+		Example:        insightExampleFromJSON(item.Example),
+		Detail:         item.Detail,
+		Action:         item.Action,
+		Kind:           item.Kind,
+		Tags:           item.Tags,
+		Context:        item.Context,
+		Links:          insightLinksFromJSON(item.Links),
+		ReviewState:    item.ReviewState,
+		LifecycleState: item.LifecycleState,
+		CreatedAt:      timestamppb.New(item.CreatedAt),
+		UpdatedAt:      timestamppb.New(item.UpdatedAt),
 	}
-	if unit.LastConfirmedAt != nil {
-		out.LastConfirmedAt = timestamppb.New(*unit.LastConfirmedAt)
+	if item.LastConfirmedAt != nil {
+		out.LastConfirmedAt = timestamppb.New(*item.LastConfirmedAt)
 	}
 	return out
 }

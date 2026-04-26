@@ -10,11 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
-type KnowledgeUnit struct {
+type Insight struct {
 	ent.Schema
 }
 
-func (KnowledgeUnit) Fields() []ent.Field {
+func (Insight) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New).
@@ -28,7 +28,7 @@ func (KnowledgeUnit) Fields() []ent.Field {
 			MaxLen(255),
 		field.Text("problem").
 			Optional(),
-		field.String("summary").
+		field.String("answer").
 			NotEmpty().
 			MaxLen(1000),
 		field.JSON("example", map[string]string{}).
@@ -39,16 +39,16 @@ func (KnowledgeUnit) Fields() []ent.Field {
 		field.Text("action").
 			Optional(),
 		field.String("kind").
-			Default("finding").
+			Default("insight").
 			NotEmpty().
 			MaxLen(100),
-		field.JSON("labels", []string{}).
+		field.JSON("tags", []string{}).
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.JSON("context", map[string]string{}).
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
-		field.JSON("evidence_refs", []map[string]string{}).
+		field.JSON("links", []map[string]string{}).
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.UUID("created_by_actor_id", uuid.UUID{}).
@@ -81,7 +81,7 @@ func (KnowledgeUnit) Fields() []ent.Field {
 	}
 }
 
-func (KnowledgeUnit) Indexes() []ent.Index {
+func (Insight) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_key"),
 		index.Fields("tenant_key", "review_state"),

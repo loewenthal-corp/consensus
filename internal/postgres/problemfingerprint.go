@@ -21,8 +21,8 @@ type ProblemFingerprint struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// TenantKey holds the value of the "tenant_key" field.
 	TenantKey string `json:"tenant_key,omitempty"`
-	// KnowledgeUnitID holds the value of the "knowledge_unit_id" field.
-	KnowledgeUnitID uuid.UUID `json:"knowledge_unit_id,omitempty"`
+	// InsightID holds the value of the "insight_id" field.
+	InsightID uuid.UUID `json:"insight_id,omitempty"`
 	// ErrorHash holds the value of the "error_hash" field.
 	ErrorHash string `json:"error_hash,omitempty"`
 	// Command holds the value of the "command" field.
@@ -53,7 +53,7 @@ func (*ProblemFingerprint) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case problemfingerprint.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case problemfingerprint.FieldID, problemfingerprint.FieldKnowledgeUnitID:
+		case problemfingerprint.FieldID, problemfingerprint.FieldInsightID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -82,11 +82,11 @@ func (_m *ProblemFingerprint) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.TenantKey = value.String
 			}
-		case problemfingerprint.FieldKnowledgeUnitID:
+		case problemfingerprint.FieldInsightID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field knowledge_unit_id", values[i])
+				return fmt.Errorf("unexpected type %T for field insight_id", values[i])
 			} else if value != nil {
-				_m.KnowledgeUnitID = *value
+				_m.InsightID = *value
 			}
 		case problemfingerprint.FieldErrorHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -177,8 +177,8 @@ func (_m *ProblemFingerprint) String() string {
 	builder.WriteString("tenant_key=")
 	builder.WriteString(_m.TenantKey)
 	builder.WriteString(", ")
-	builder.WriteString("knowledge_unit_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.KnowledgeUnitID))
+	builder.WriteString("insight_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InsightID))
 	builder.WriteString(", ")
 	builder.WriteString("error_hash=")
 	builder.WriteString(_m.ErrorHash)

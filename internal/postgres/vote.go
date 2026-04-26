@@ -20,8 +20,8 @@ type Vote struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// TenantKey holds the value of the "tenant_key" field.
 	TenantKey string `json:"tenant_key,omitempty"`
-	// KnowledgeUnitID holds the value of the "knowledge_unit_id" field.
-	KnowledgeUnitID uuid.UUID `json:"knowledge_unit_id,omitempty"`
+	// InsightID holds the value of the "insight_id" field.
+	InsightID uuid.UUID `json:"insight_id,omitempty"`
 	// ActorID holds the value of the "actor_id" field.
 	ActorID *uuid.UUID `json:"actor_id,omitempty"`
 	// ProblemFingerprintID holds the value of the "problem_fingerprint_id" field.
@@ -52,7 +52,7 @@ func (*Vote) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case vote.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case vote.FieldID, vote.FieldKnowledgeUnitID:
+		case vote.FieldID, vote.FieldInsightID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -81,11 +81,11 @@ func (_m *Vote) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.TenantKey = value.String
 			}
-		case vote.FieldKnowledgeUnitID:
+		case vote.FieldInsightID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field knowledge_unit_id", values[i])
+				return fmt.Errorf("unexpected type %T for field insight_id", values[i])
 			} else if value != nil {
-				_m.KnowledgeUnitID = *value
+				_m.InsightID = *value
 			}
 		case vote.FieldActorID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -171,8 +171,8 @@ func (_m *Vote) String() string {
 	builder.WriteString("tenant_key=")
 	builder.WriteString(_m.TenantKey)
 	builder.WriteString(", ")
-	builder.WriteString("knowledge_unit_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.KnowledgeUnitID))
+	builder.WriteString("insight_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InsightID))
 	builder.WriteString(", ")
 	if v := _m.ActorID; v != nil {
 		builder.WriteString("actor_id=")

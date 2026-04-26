@@ -38,9 +38,9 @@ func (_c *VoteCreate) SetNillableTenantKey(v *string) *VoteCreate {
 	return _c
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (_c *VoteCreate) SetKnowledgeUnitID(v uuid.UUID) *VoteCreate {
-	_c.mutation.SetKnowledgeUnitID(v)
+// SetInsightID sets the "insight_id" field.
+func (_c *VoteCreate) SetInsightID(v uuid.UUID) *VoteCreate {
+	_c.mutation.SetInsightID(v)
 	return _c
 }
 
@@ -211,8 +211,8 @@ func (_c *VoteCreate) check() error {
 			return &ValidationError{Name: "tenant_key", err: fmt.Errorf(`postgres: validator failed for field "Vote.tenant_key": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.KnowledgeUnitID(); !ok {
-		return &ValidationError{Name: "knowledge_unit_id", err: errors.New(`postgres: missing required field "Vote.knowledge_unit_id"`)}
+	if _, ok := _c.mutation.InsightID(); !ok {
+		return &ValidationError{Name: "insight_id", err: errors.New(`postgres: missing required field "Vote.insight_id"`)}
 	}
 	if _, ok := _c.mutation.Outcome(); !ok {
 		return &ValidationError{Name: "outcome", err: errors.New(`postgres: missing required field "Vote.outcome"`)}
@@ -273,9 +273,9 @@ func (_c *VoteCreate) createSpec() (*Vote, *sqlgraph.CreateSpec) {
 		_spec.SetField(vote.FieldTenantKey, field.TypeString, value)
 		_node.TenantKey = value
 	}
-	if value, ok := _c.mutation.KnowledgeUnitID(); ok {
-		_spec.SetField(vote.FieldKnowledgeUnitID, field.TypeUUID, value)
-		_node.KnowledgeUnitID = value
+	if value, ok := _c.mutation.InsightID(); ok {
+		_spec.SetField(vote.FieldInsightID, field.TypeUUID, value)
+		_node.InsightID = value
 	}
 	if value, ok := _c.mutation.ActorID(); ok {
 		_spec.SetField(vote.FieldActorID, field.TypeUUID, value)
@@ -369,15 +369,15 @@ func (u *VoteUpsert) UpdateTenantKey() *VoteUpsert {
 	return u
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *VoteUpsert) SetKnowledgeUnitID(v uuid.UUID) *VoteUpsert {
-	u.Set(vote.FieldKnowledgeUnitID, v)
+// SetInsightID sets the "insight_id" field.
+func (u *VoteUpsert) SetInsightID(v uuid.UUID) *VoteUpsert {
+	u.Set(vote.FieldInsightID, v)
 	return u
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *VoteUpsert) UpdateKnowledgeUnitID() *VoteUpsert {
-	u.SetExcluded(vote.FieldKnowledgeUnitID)
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *VoteUpsert) UpdateInsightID() *VoteUpsert {
+	u.SetExcluded(vote.FieldInsightID)
 	return u
 }
 
@@ -548,17 +548,17 @@ func (u *VoteUpsertOne) UpdateTenantKey() *VoteUpsertOne {
 	})
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *VoteUpsertOne) SetKnowledgeUnitID(v uuid.UUID) *VoteUpsertOne {
+// SetInsightID sets the "insight_id" field.
+func (u *VoteUpsertOne) SetInsightID(v uuid.UUID) *VoteUpsertOne {
 	return u.Update(func(s *VoteUpsert) {
-		s.SetKnowledgeUnitID(v)
+		s.SetInsightID(v)
 	})
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *VoteUpsertOne) UpdateKnowledgeUnitID() *VoteUpsertOne {
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *VoteUpsertOne) UpdateInsightID() *VoteUpsertOne {
 	return u.Update(func(s *VoteUpsert) {
-		s.UpdateKnowledgeUnitID()
+		s.UpdateInsightID()
 	})
 }
 
@@ -913,17 +913,17 @@ func (u *VoteUpsertBulk) UpdateTenantKey() *VoteUpsertBulk {
 	})
 }
 
-// SetKnowledgeUnitID sets the "knowledge_unit_id" field.
-func (u *VoteUpsertBulk) SetKnowledgeUnitID(v uuid.UUID) *VoteUpsertBulk {
+// SetInsightID sets the "insight_id" field.
+func (u *VoteUpsertBulk) SetInsightID(v uuid.UUID) *VoteUpsertBulk {
 	return u.Update(func(s *VoteUpsert) {
-		s.SetKnowledgeUnitID(v)
+		s.SetInsightID(v)
 	})
 }
 
-// UpdateKnowledgeUnitID sets the "knowledge_unit_id" field to the value that was provided on create.
-func (u *VoteUpsertBulk) UpdateKnowledgeUnitID() *VoteUpsertBulk {
+// UpdateInsightID sets the "insight_id" field to the value that was provided on create.
+func (u *VoteUpsertBulk) UpdateInsightID() *VoteUpsertBulk {
 	return u.Update(func(s *VoteUpsert) {
-		s.UpdateKnowledgeUnitID()
+		s.UpdateInsightID()
 	})
 }
 

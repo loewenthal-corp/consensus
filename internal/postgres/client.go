@@ -18,8 +18,8 @@ import (
 	"github.com/loewenthal-corp/consensus/internal/postgres/actor"
 	"github.com/loewenthal-corp/consensus/internal/postgres/auditevent"
 	"github.com/loewenthal-corp/consensus/internal/postgres/graphedge"
+	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
 	"github.com/loewenthal-corp/consensus/internal/postgres/job"
-	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
 	"github.com/loewenthal-corp/consensus/internal/postgres/problemfingerprint"
 	"github.com/loewenthal-corp/consensus/internal/postgres/setting"
 	"github.com/loewenthal-corp/consensus/internal/postgres/tenant"
@@ -37,10 +37,10 @@ type Client struct {
 	AuditEvent *AuditEventClient
 	// GraphEdge is the client for interacting with the GraphEdge builders.
 	GraphEdge *GraphEdgeClient
+	// Insight is the client for interacting with the Insight builders.
+	Insight *InsightClient
 	// Job is the client for interacting with the Job builders.
 	Job *JobClient
-	// KnowledgeUnit is the client for interacting with the KnowledgeUnit builders.
-	KnowledgeUnit *KnowledgeUnitClient
 	// ProblemFingerprint is the client for interacting with the ProblemFingerprint builders.
 	ProblemFingerprint *ProblemFingerprintClient
 	// Setting is the client for interacting with the Setting builders.
@@ -63,8 +63,8 @@ func (c *Client) init() {
 	c.Actor = NewActorClient(c.config)
 	c.AuditEvent = NewAuditEventClient(c.config)
 	c.GraphEdge = NewGraphEdgeClient(c.config)
+	c.Insight = NewInsightClient(c.config)
 	c.Job = NewJobClient(c.config)
-	c.KnowledgeUnit = NewKnowledgeUnitClient(c.config)
 	c.ProblemFingerprint = NewProblemFingerprintClient(c.config)
 	c.Setting = NewSettingClient(c.config)
 	c.Tenant = NewTenantClient(c.config)
@@ -164,8 +164,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Actor:              NewActorClient(cfg),
 		AuditEvent:         NewAuditEventClient(cfg),
 		GraphEdge:          NewGraphEdgeClient(cfg),
+		Insight:            NewInsightClient(cfg),
 		Job:                NewJobClient(cfg),
-		KnowledgeUnit:      NewKnowledgeUnitClient(cfg),
 		ProblemFingerprint: NewProblemFingerprintClient(cfg),
 		Setting:            NewSettingClient(cfg),
 		Tenant:             NewTenantClient(cfg),
@@ -192,8 +192,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Actor:              NewActorClient(cfg),
 		AuditEvent:         NewAuditEventClient(cfg),
 		GraphEdge:          NewGraphEdgeClient(cfg),
+		Insight:            NewInsightClient(cfg),
 		Job:                NewJobClient(cfg),
-		KnowledgeUnit:      NewKnowledgeUnitClient(cfg),
 		ProblemFingerprint: NewProblemFingerprintClient(cfg),
 		Setting:            NewSettingClient(cfg),
 		Tenant:             NewTenantClient(cfg),
@@ -227,8 +227,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Actor, c.AuditEvent, c.GraphEdge, c.Job, c.KnowledgeUnit,
-		c.ProblemFingerprint, c.Setting, c.Tenant, c.Vote,
+		c.Actor, c.AuditEvent, c.GraphEdge, c.Insight, c.Job, c.ProblemFingerprint,
+		c.Setting, c.Tenant, c.Vote,
 	} {
 		n.Use(hooks...)
 	}
@@ -238,8 +238,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Actor, c.AuditEvent, c.GraphEdge, c.Job, c.KnowledgeUnit,
-		c.ProblemFingerprint, c.Setting, c.Tenant, c.Vote,
+		c.Actor, c.AuditEvent, c.GraphEdge, c.Insight, c.Job, c.ProblemFingerprint,
+		c.Setting, c.Tenant, c.Vote,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -254,10 +254,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuditEvent.mutate(ctx, m)
 	case *GraphEdgeMutation:
 		return c.GraphEdge.mutate(ctx, m)
+	case *InsightMutation:
+		return c.Insight.mutate(ctx, m)
 	case *JobMutation:
 		return c.Job.mutate(ctx, m)
-	case *KnowledgeUnitMutation:
-		return c.KnowledgeUnit.mutate(ctx, m)
 	case *ProblemFingerprintMutation:
 		return c.ProblemFingerprint.mutate(ctx, m)
 	case *SettingMutation:
@@ -670,6 +670,139 @@ func (c *GraphEdgeClient) mutate(ctx context.Context, m *GraphEdgeMutation) (Val
 	}
 }
 
+// InsightClient is a client for the Insight schema.
+type InsightClient struct {
+	config
+}
+
+// NewInsightClient returns a client for the Insight from the given config.
+func NewInsightClient(c config) *InsightClient {
+	return &InsightClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `insight.Hooks(f(g(h())))`.
+func (c *InsightClient) Use(hooks ...Hook) {
+	c.hooks.Insight = append(c.hooks.Insight, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `insight.Intercept(f(g(h())))`.
+func (c *InsightClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Insight = append(c.inters.Insight, interceptors...)
+}
+
+// Create returns a builder for creating a Insight entity.
+func (c *InsightClient) Create() *InsightCreate {
+	mutation := newInsightMutation(c.config, OpCreate)
+	return &InsightCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Insight entities.
+func (c *InsightClient) CreateBulk(builders ...*InsightCreate) *InsightCreateBulk {
+	return &InsightCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *InsightClient) MapCreateBulk(slice any, setFunc func(*InsightCreate, int)) *InsightCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &InsightCreateBulk{err: fmt.Errorf("calling to InsightClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*InsightCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &InsightCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Insight.
+func (c *InsightClient) Update() *InsightUpdate {
+	mutation := newInsightMutation(c.config, OpUpdate)
+	return &InsightUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *InsightClient) UpdateOne(_m *Insight) *InsightUpdateOne {
+	mutation := newInsightMutation(c.config, OpUpdateOne, withInsight(_m))
+	return &InsightUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *InsightClient) UpdateOneID(id uuid.UUID) *InsightUpdateOne {
+	mutation := newInsightMutation(c.config, OpUpdateOne, withInsightID(id))
+	return &InsightUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Insight.
+func (c *InsightClient) Delete() *InsightDelete {
+	mutation := newInsightMutation(c.config, OpDelete)
+	return &InsightDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *InsightClient) DeleteOne(_m *Insight) *InsightDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *InsightClient) DeleteOneID(id uuid.UUID) *InsightDeleteOne {
+	builder := c.Delete().Where(insight.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &InsightDeleteOne{builder}
+}
+
+// Query returns a query builder for Insight.
+func (c *InsightClient) Query() *InsightQuery {
+	return &InsightQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeInsight},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Insight entity by its id.
+func (c *InsightClient) Get(ctx context.Context, id uuid.UUID) (*Insight, error) {
+	return c.Query().Where(insight.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *InsightClient) GetX(ctx context.Context, id uuid.UUID) *Insight {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *InsightClient) Hooks() []Hook {
+	return c.hooks.Insight
+}
+
+// Interceptors returns the client interceptors.
+func (c *InsightClient) Interceptors() []Interceptor {
+	return c.inters.Insight
+}
+
+func (c *InsightClient) mutate(ctx context.Context, m *InsightMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&InsightCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&InsightUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&InsightUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&InsightDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("postgres: unknown Insight mutation op: %q", m.Op())
+	}
+}
+
 // JobClient is a client for the Job schema.
 type JobClient struct {
 	config
@@ -800,139 +933,6 @@ func (c *JobClient) mutate(ctx context.Context, m *JobMutation) (Value, error) {
 		return (&JobDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("postgres: unknown Job mutation op: %q", m.Op())
-	}
-}
-
-// KnowledgeUnitClient is a client for the KnowledgeUnit schema.
-type KnowledgeUnitClient struct {
-	config
-}
-
-// NewKnowledgeUnitClient returns a client for the KnowledgeUnit from the given config.
-func NewKnowledgeUnitClient(c config) *KnowledgeUnitClient {
-	return &KnowledgeUnitClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `knowledgeunit.Hooks(f(g(h())))`.
-func (c *KnowledgeUnitClient) Use(hooks ...Hook) {
-	c.hooks.KnowledgeUnit = append(c.hooks.KnowledgeUnit, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `knowledgeunit.Intercept(f(g(h())))`.
-func (c *KnowledgeUnitClient) Intercept(interceptors ...Interceptor) {
-	c.inters.KnowledgeUnit = append(c.inters.KnowledgeUnit, interceptors...)
-}
-
-// Create returns a builder for creating a KnowledgeUnit entity.
-func (c *KnowledgeUnitClient) Create() *KnowledgeUnitCreate {
-	mutation := newKnowledgeUnitMutation(c.config, OpCreate)
-	return &KnowledgeUnitCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of KnowledgeUnit entities.
-func (c *KnowledgeUnitClient) CreateBulk(builders ...*KnowledgeUnitCreate) *KnowledgeUnitCreateBulk {
-	return &KnowledgeUnitCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *KnowledgeUnitClient) MapCreateBulk(slice any, setFunc func(*KnowledgeUnitCreate, int)) *KnowledgeUnitCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &KnowledgeUnitCreateBulk{err: fmt.Errorf("calling to KnowledgeUnitClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*KnowledgeUnitCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &KnowledgeUnitCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for KnowledgeUnit.
-func (c *KnowledgeUnitClient) Update() *KnowledgeUnitUpdate {
-	mutation := newKnowledgeUnitMutation(c.config, OpUpdate)
-	return &KnowledgeUnitUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *KnowledgeUnitClient) UpdateOne(_m *KnowledgeUnit) *KnowledgeUnitUpdateOne {
-	mutation := newKnowledgeUnitMutation(c.config, OpUpdateOne, withKnowledgeUnit(_m))
-	return &KnowledgeUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *KnowledgeUnitClient) UpdateOneID(id uuid.UUID) *KnowledgeUnitUpdateOne {
-	mutation := newKnowledgeUnitMutation(c.config, OpUpdateOne, withKnowledgeUnitID(id))
-	return &KnowledgeUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for KnowledgeUnit.
-func (c *KnowledgeUnitClient) Delete() *KnowledgeUnitDelete {
-	mutation := newKnowledgeUnitMutation(c.config, OpDelete)
-	return &KnowledgeUnitDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *KnowledgeUnitClient) DeleteOne(_m *KnowledgeUnit) *KnowledgeUnitDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *KnowledgeUnitClient) DeleteOneID(id uuid.UUID) *KnowledgeUnitDeleteOne {
-	builder := c.Delete().Where(knowledgeunit.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &KnowledgeUnitDeleteOne{builder}
-}
-
-// Query returns a query builder for KnowledgeUnit.
-func (c *KnowledgeUnitClient) Query() *KnowledgeUnitQuery {
-	return &KnowledgeUnitQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeKnowledgeUnit},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a KnowledgeUnit entity by its id.
-func (c *KnowledgeUnitClient) Get(ctx context.Context, id uuid.UUID) (*KnowledgeUnit, error) {
-	return c.Query().Where(knowledgeunit.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *KnowledgeUnitClient) GetX(ctx context.Context, id uuid.UUID) *KnowledgeUnit {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *KnowledgeUnitClient) Hooks() []Hook {
-	return c.hooks.KnowledgeUnit
-}
-
-// Interceptors returns the client interceptors.
-func (c *KnowledgeUnitClient) Interceptors() []Interceptor {
-	return c.inters.KnowledgeUnit
-}
-
-func (c *KnowledgeUnitClient) mutate(ctx context.Context, m *KnowledgeUnitMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&KnowledgeUnitCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&KnowledgeUnitUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&KnowledgeUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&KnowledgeUnitDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("postgres: unknown KnowledgeUnit mutation op: %q", m.Op())
 	}
 }
 
@@ -1471,11 +1471,11 @@ func (c *VoteClient) mutate(ctx context.Context, m *VoteMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Actor, AuditEvent, GraphEdge, Job, KnowledgeUnit, ProblemFingerprint, Setting,
-		Tenant, Vote []ent.Hook
+		Actor, AuditEvent, GraphEdge, Insight, Job, ProblemFingerprint, Setting, Tenant,
+		Vote []ent.Hook
 	}
 	inters struct {
-		Actor, AuditEvent, GraphEdge, Job, KnowledgeUnit, ProblemFingerprint, Setting,
-		Tenant, Vote []ent.Interceptor
+		Actor, AuditEvent, GraphEdge, Insight, Job, ProblemFingerprint, Setting, Tenant,
+		Vote []ent.Interceptor
 	}
 )
