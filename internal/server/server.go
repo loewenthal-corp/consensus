@@ -28,7 +28,7 @@ type Config struct {
 	Service *consensus.Service
 }
 
-func New(cfg Config) (http.Handler, error) {
+func NewAPI(cfg Config) (http.Handler, error) {
 	if cfg.Service == nil {
 		return nil, fmt.Errorf("service is required")
 	}
@@ -39,21 +39,26 @@ func New(cfg Config) (http.Handler, error) {
 
 	registerConnectHandlers(mux, cfg.Service)
 
+	return requestMiddleware(mux), nil
+}
+
+func NewMCP(cfg Config) (http.Handler, error) {
+	if cfg.Service == nil {
+		return nil, fmt.Errorf("service is required")
+	}
+
 	mcpHandler, err := newMCPHandler(cfg.Service)
 	if err != nil {
 		return nil, err
 	}
-	mux.Handle("/mcp", mcpHandler)
 
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", mcpHandler)
 	return requestMiddleware(mux), nil
 }
 
 func registerConnectHandlers(mux *http.ServeMux, svc *consensus.Service) {
-	path, handler := consensusv1connect.NewKnowledgeServiceHandler(svc)
-	mux.Handle(path, handler)
-	path, handler = consensusv1connect.NewVoteServiceHandler(svc)
-	mux.Handle(path, handler)
-	path, handler = consensusv1connect.NewGraphServiceHandler(svc)
+	path, handler := consensusv1connect.NewInsightServiceHandler(svc)
 	mux.Handle(path, handler)
 }
 
@@ -69,18 +74,15 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 	handler := serviceDispatcher(svc)
 
 	for _, serviceName := range []string{
-		"consensus.v1.KnowledgeService",
-		"consensus.v1.VoteService",
-		"consensus.v1.GraphService",
+		"consensus.v1.InsightService",
 	} {
 		sd, err := findServiceDescriptor(serviceName)
 		if err != nil {
 			return nil, err
 		}
-		gen.RegisterService(mcpServer, sd, handler, gen.RegisterServiceOptions{
-			Provider:        runtime.LLMProviderStandard,
-			CommentProvider: mcpToolComment,
-		})
+		if registered := registerMCPTools(mcpServer, sd, handler); registered == 0 {
+			return nil, fmt.Errorf("no MCP tools registered for %s", serviceName)
+		}
 	}
 
 	return mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
@@ -92,21 +94,22 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 
 const mcpInstructions = `Consensus is market-based context engineering for AI agents.
 
-Use it as a shared organizational memory layer for compact, evidence-backed learnings that should survive one agent thread. Search before rediscovering a solution. Contribute only durable findings with problem context, concrete action, and evidence. Cast votes after a unit actually solved, helped, failed, or became stale so ranking can learn from real outcomes.
+Use it as a shared organizational memory layer for compact, evidence-backed insights that should survive one agent thread. Search before rediscovering a solution. Create only durable insights with the situation, answer, concrete action, optional example, and useful links. Record outcomes after an insight actually solved, helped, failed after being applied, or became stale so ranking can learn from real outcomes.
 
-Read operations return knowledge units and graph relationships. Write operations mutate shared memory and are intended for trusted deployments or scoped authorization.`
+The MCP surface is intentionally tiny: search, get, create, and record_outcome. Links carry docs, source threads, related insights, issues, and evidence as fields on insights. Administrative edits and broader API operations belong on the API/admin port, not in agent tools.`
 
 var mcpToolComments = map[protoreflect.FullName]string{
-	"consensus.v1.KnowledgeService.Search":     `Search returns ranked knowledge units for a problem statement, error, task, failing command, stack trace, or repo/tool context. Use this before spending tokens rediscovering an answer that another agent may have already proven.`,
-	"consensus.v1.KnowledgeService.Get":        `Get returns one knowledge unit by ID, including its answer, action, labels, context, evidence references, lifecycle state, and review state.`,
-	"consensus.v1.KnowledgeService.Contribute": `Contribute submits a new candidate knowledge unit after a thread discovers a durable lesson. Store the distilled problem, context, answer, concrete action, and evidence instead of pasting a whole conversation.`,
-	"consensus.v1.KnowledgeService.Update":     `Update amends an existing knowledge unit when the stored finding needs a clearer title, fresher evidence, corrected context, or a revised action.`,
-	"consensus.v1.VoteService.Cast":            `Cast records a utility signal for a knowledge unit. Use outcomes such as solved, helped, failed, or stale to teach ranking what actually worked in the current environment.`,
-	"consensus.v1.VoteService.Retract":         `Retract removes or corrects a previous utility signal when the vote was accidental, duplicated, or no longer represents the observed result.`,
-	"consensus.v1.GraphService.Link":           `Link creates a typed relationship between two knowledge or problem nodes, such as related, same_root_cause, supersedes, requires, or contradicts.`,
-	"consensus.v1.GraphService.Unlink":         `Unlink tombstones a relationship when a graph edge was wrong, duplicated, or no longer useful for retrieval.`,
-	"consensus.v1.GraphService.Neighbors":      `Neighbors returns nearby units and relationships so an agent can inspect adjacent issues, solution clusters, and root-cause neighborhoods.`,
-	"consensus.v1.GraphService.ExplainPath":    `ExplainPath explains why two units or problems are connected, returning the graph edges that justify the relationship when a path is known.`,
+	"consensus.v1.InsightService.Search":        `Search returns ranked insights for a problem statement, exact error, failing command, stack trace, snippet, or repo/tool context. Include the smallest concrete example available when it helps identify the issue.`,
+	"consensus.v1.InsightService.Get":           `Get returns one insight by local ID or federated reference, including the situation, answer, action, optional example, links, lifecycle state, and review state.`,
+	"consensus.v1.InsightService.Create":        `Create submits a new candidate insight after a thread discovers a durable answer. Store the distilled situation, answer, concrete action, optional example, and useful links instead of pasting a whole conversation.`,
+	"consensus.v1.InsightService.RecordOutcome": `RecordOutcome records whether an insight worked after it was applied. Use did_not_work only when the insight appeared to match the problem and the suggested action was tried but failed, not when the result was merely irrelevant.`,
+}
+
+var mcpMethodAllowlist = map[protoreflect.FullName]struct{}{
+	"consensus.v1.InsightService.Search":        {},
+	"consensus.v1.InsightService.Get":           {},
+	"consensus.v1.InsightService.Create":        {},
+	"consensus.v1.InsightService.RecordOutcome": {},
 }
 
 func mcpToolComment(method protoreflect.MethodDescriptor) string {
@@ -116,69 +119,72 @@ func mcpToolComment(method protoreflect.MethodDescriptor) string {
 	return mcpToolComments[method.FullName()]
 }
 
+func registerMCPTools(s runtime.MCPServer, sd protoreflect.ServiceDescriptor, handler gen.Handler) int {
+	registered := 0
+	for i := range sd.Methods().Len() {
+		method := sd.Methods().Get(i)
+		if method.IsStreamingClient() || method.IsStreamingServer() {
+			continue
+		}
+		if _, ok := mcpMethodAllowlist[method.FullName()]; !ok {
+			continue
+		}
+
+		tool, _ := gen.ToolForMethod(method, mcpToolComment(method))
+		md := method
+		s.AddTool(tool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
+			marshaled, err := json.Marshal(request.Arguments)
+			if err != nil {
+				return nil, err
+			}
+			req := gen.DynamicNewMessage(md.Input())
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, req); err != nil {
+				return nil, err
+			}
+
+			resp, err := handler(ctx, md, req)
+			if err != nil {
+				return runtime.HandleError(err)
+			}
+
+			marshaled, err = (protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}).Marshal(resp)
+			if err != nil {
+				return nil, err
+			}
+			return runtime.NewToolResultText(string(marshaled)), nil
+		})
+		registered++
+	}
+	return registered
+}
+
 func serviceDispatcher(svc *consensus.Service) gen.Handler {
 	return func(ctx context.Context, method protoreflect.MethodDescriptor, req proto.Message) (proto.Message, error) {
 		switch string(method.FullName()) {
-		case "consensus.v1.KnowledgeService.Search":
-			var concrete consensusv1.KnowledgeServiceSearchRequest
+		case "consensus.v1.InsightService.Search":
+			var concrete consensusv1.InsightServiceSearchRequest
 			if err := remarshal(req, &concrete); err != nil {
 				return nil, err
 			}
 			return svc.Search(ctx, &concrete)
-		case "consensus.v1.KnowledgeService.Get":
-			var concrete consensusv1.KnowledgeServiceGetRequest
+		case "consensus.v1.InsightService.Get":
+			var concrete consensusv1.InsightServiceGetRequest
 			if err := remarshal(req, &concrete); err != nil {
 				return nil, err
 			}
 			return svc.Get(ctx, &concrete)
-		case "consensus.v1.KnowledgeService.Contribute":
-			var concrete consensusv1.KnowledgeServiceContributeRequest
+		case "consensus.v1.InsightService.Create":
+			var concrete consensusv1.InsightServiceCreateRequest
 			if err := remarshal(req, &concrete); err != nil {
 				return nil, err
 			}
-			return svc.Contribute(ctx, &concrete)
-		case "consensus.v1.KnowledgeService.Update":
-			var concrete consensusv1.KnowledgeServiceUpdateRequest
+			return svc.Create(ctx, &concrete)
+		case "consensus.v1.InsightService.RecordOutcome":
+			var concrete consensusv1.InsightServiceRecordOutcomeRequest
 			if err := remarshal(req, &concrete); err != nil {
 				return nil, err
 			}
-			return svc.Update(ctx, &concrete)
-		case "consensus.v1.VoteService.Cast":
-			var concrete consensusv1.VoteServiceCastRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.Cast(ctx, &concrete)
-		case "consensus.v1.VoteService.Retract":
-			var concrete consensusv1.VoteServiceRetractRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.Retract(ctx, &concrete)
-		case "consensus.v1.GraphService.Link":
-			var concrete consensusv1.GraphServiceLinkRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.Link(ctx, &concrete)
-		case "consensus.v1.GraphService.Unlink":
-			var concrete consensusv1.GraphServiceUnlinkRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.Unlink(ctx, &concrete)
-		case "consensus.v1.GraphService.Neighbors":
-			var concrete consensusv1.GraphServiceNeighborsRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.Neighbors(ctx, &concrete)
-		case "consensus.v1.GraphService.ExplainPath":
-			var concrete consensusv1.GraphServiceExplainPathRequest
-			if err := remarshal(req, &concrete); err != nil {
-				return nil, err
-			}
-			return svc.ExplainPath(ctx, &concrete)
+			return svc.RecordOutcome(ctx, &concrete)
 		default:
 			return nil, fmt.Errorf("unhandled MCP method %s", method.FullName())
 		}
@@ -224,8 +230,8 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 
 func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		units, err := svc.ListRecentKnowledge(r.Context(), 25)
-		data := adminPageData{Units: units}
+		insights, err := svc.ListRecentInsights(r.Context(), 25)
+		data := adminPageData{Insights: insights}
 		if err != nil {
 			data.Error = err.Error()
 		}
@@ -238,17 +244,17 @@ func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 }
 
 type adminPageData struct {
-	Units []*consensusv1.KnowledgeUnit
-	Error string
+	Insights []*consensusv1.Insight
+	Error    string
 }
 
 var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
 	"join": strings.Join,
-	"unitLabel": func(count int) string {
+	"insightLabel": func(count int) string {
 		if count == 1 {
-			return "knowledge unit"
+			return "insight"
 		}
-		return "knowledge units"
+		return "insights"
 	},
 	"formatTime": func(ts interface{ AsTime() time.Time }) string {
 		if ts == nil {
@@ -360,37 +366,37 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
   <main>
     <header>
       <h1>Consensus Admin</h1>
-      <div class="count">{{len .Units}} {{unitLabel (len .Units)}}</div>
+      <div class="count">{{len .Insights}} {{insightLabel (len .Insights)}}</div>
     </header>
     {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
-    {{if .Units}}
+    {{if .Insights}}
     <table>
       <thead>
         <tr>
-          <th style="width: 40%">Knowledge</th>
+          <th style="width: 40%">Insight</th>
           <th style="width: 14%">Kind</th>
           <th style="width: 14%">State</th>
-          <th style="width: 18%">Labels</th>
+          <th style="width: 18%">Tags</th>
           <th style="width: 14%">Updated</th>
         </tr>
       </thead>
       <tbody>
-        {{range .Units}}
+        {{range .Insights}}
         <tr>
           <td>
             <div class="title">{{.Title}}</div>
-            <div class="summary">{{.Summary}}</div>
+            <div class="summary">{{.Answer}}</div>
           </td>
           <td>{{.Kind}}</td>
           <td>{{.ReviewState}} / {{.LifecycleState}}</td>
-          <td>{{join .Labels ", "}}</td>
+          <td>{{join .Tags ", "}}</td>
           <td>{{formatTime .UpdatedAt}}</td>
         </tr>
         {{end}}
       </tbody>
     </table>
     {{else}}
-    <div class="empty">No knowledge units yet.</div>
+    <div class="empty">No insights yet.</div>
     {{end}}
   </main>
 </body>

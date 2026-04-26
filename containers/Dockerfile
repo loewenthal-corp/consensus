@@ -31,6 +31,6 @@ RUN apk add --no-cache ca-certificates \
 COPY --from=build /out/consensus /usr/local/bin/consensus
 
 USER consensus
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/usr/local/bin/consensus"]

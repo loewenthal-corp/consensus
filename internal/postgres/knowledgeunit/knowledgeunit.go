@@ -18,8 +18,12 @@ const (
 	FieldTenantKey = "tenant_key"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
+	// FieldProblem holds the string denoting the problem field in the database.
+	FieldProblem = "problem"
 	// FieldSummary holds the string denoting the summary field in the database.
 	FieldSummary = "summary"
+	// FieldExample holds the string denoting the example field in the database.
+	FieldExample = "example"
 	// FieldDetail holds the string denoting the detail field in the database.
 	FieldDetail = "detail"
 	// FieldAction holds the string denoting the action field in the database.
@@ -57,7 +61,9 @@ var Columns = []string{
 	FieldID,
 	FieldTenantKey,
 	FieldTitle,
+	FieldProblem,
 	FieldSummary,
+	FieldExample,
 	FieldDetail,
 	FieldAction,
 	FieldKind,
@@ -133,6 +139,11 @@ func ByTenantKey(opts ...sql.OrderTermOption) OrderOption {
 // ByTitle orders the results by the title field.
 func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTitle, opts...).ToFunc()
+}
+
+// ByProblem orders the results by the problem field.
+func ByProblem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProblem, opts...).ToFunc()
 }
 
 // BySummary orders the results by the summary field.

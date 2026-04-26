@@ -10,13 +10,21 @@ import (
 	"github.com/google/uuid"
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/postgres"
-	"github.com/loewenthal-corp/consensus/internal/postgres/graphedge"
 	"github.com/loewenthal-corp/consensus/internal/postgres/knowledgeunit"
 	"github.com/loewenthal-corp/consensus/internal/postgres/predicate"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const defaultTenantKey = "default"
+
+var validOutcomes = map[string]struct{}{
+	"solved":         {},
+	"helped":         {},
+	"did_not_work":   {},
+	"stale":          {},
+	"incorrect":      {},
+	"not_applicable": {},
+}
 
 type Service struct {
 	db *postgres.Client
@@ -26,7 +34,7 @@ func NewService(db *postgres.Client) *Service {
 	return &Service{db: db}
 }
 
-func (s *Service) ListRecentKnowledge(ctx context.Context, limit int) ([]*consensusv1.KnowledgeUnit, error) {
+func (s *Service) ListRecentInsights(ctx context.Context, limit int) ([]*consensusv1.Insight, error) {
 	if s.db == nil {
 		return nil, nil
 	}
@@ -40,17 +48,17 @@ func (s *Service) ListRecentKnowledge(ctx context.Context, limit int) ([]*consen
 		Limit(limit).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list recent knowledge: %w", err)
+		return nil, fmt.Errorf("list recent insights: %w", err)
 	}
 
-	out := make([]*consensusv1.KnowledgeUnit, 0, len(units))
+	out := make([]*consensusv1.Insight, 0, len(units))
 	for _, unit := range units {
-		out = append(out, toProtoKnowledgeUnit(unit))
+		out = append(out, toProtoInsight(unit))
 	}
 	return out, nil
 }
 
-func (s *Service) Search(ctx context.Context, req *consensusv1.KnowledgeServiceSearchRequest) (*consensusv1.KnowledgeServiceSearchResponse, error) {
+func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSearchRequest) (*consensusv1.InsightServiceSearchResponse, error) {
 	rawQuery := strings.TrimSpace(req.GetQuery())
 	if rawQuery == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("query is required"))
@@ -65,29 +73,29 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.KnowledgeServiceS
 		Where(
 			knowledgeunit.TenantKey(defaultTenantKey),
 			knowledgeunit.LifecycleState("active"),
-			knowledgeunit.Or(knowledgeTextPredicates(rawQuery)...),
+			knowledgeunit.Or(insightTextPredicates(rawQuery)...),
 		).
 		Limit(limit).
 		Order(postgres.Desc(knowledgeunit.FieldUpdatedAt))
 
 	units, err := query.All(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("search knowledge: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("search insights: %w", err))
 	}
 
-	results := make([]*consensusv1.KnowledgeSearchResult, 0, len(units))
+	results := make([]*consensusv1.InsightSearchResult, 0, len(units))
 	for _, unit := range units {
-		results = append(results, &consensusv1.KnowledgeSearchResult{
-			Unit:           toProtoKnowledgeUnit(unit),
+		results = append(results, &consensusv1.InsightSearchResult{
+			Insight:        toProtoInsight(unit),
 			Score:          1,
 			RankReason:     "matched text fields",
 			MatchedSignals: []string{"text"},
 		})
 	}
-	return &consensusv1.KnowledgeServiceSearchResponse{Results: results}, nil
+	return &consensusv1.InsightServiceSearchResponse{Results: results}, nil
 }
 
-func knowledgeTextPredicates(query string) []predicate.KnowledgeUnit {
+func insightTextPredicates(query string) []predicate.KnowledgeUnit {
 	seen := make(map[string]struct{})
 	terms := make([]string, 0, 1+len(strings.Fields(query)))
 
@@ -109,10 +117,11 @@ func knowledgeTextPredicates(query string) []predicate.KnowledgeUnit {
 		addTerm(term)
 	}
 
-	predicates := make([]predicate.KnowledgeUnit, 0, len(terms)*4)
+	predicates := make([]predicate.KnowledgeUnit, 0, len(terms)*5)
 	for _, term := range terms {
 		predicates = append(predicates,
 			knowledgeunit.TitleContainsFold(term),
+			knowledgeunit.ProblemContainsFold(term),
 			knowledgeunit.SummaryContainsFold(term),
 			knowledgeunit.DetailContainsFold(term),
 			knowledgeunit.ActionContainsFold(term),
@@ -121,10 +130,10 @@ func knowledgeTextPredicates(query string) []predicate.KnowledgeUnit {
 	return predicates
 }
 
-func (s *Service) Get(ctx context.Context, req *consensusv1.KnowledgeServiceGetRequest) (*consensusv1.KnowledgeServiceGetResponse, error) {
-	id, err := uuid.Parse(req.GetId())
+func (s *Service) Get(ctx context.Context, req *consensusv1.InsightServiceGetRequest) (*consensusv1.InsightServiceGetResponse, error) {
+	id, err := parseLocalInsightRef(req.GetRef())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid id: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	unit, err := s.db.KnowledgeUnit.Query().
@@ -132,36 +141,38 @@ func (s *Service) Get(ctx context.Context, req *consensusv1.KnowledgeServiceGetR
 		Only(ctx)
 	if err != nil {
 		if postgres.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("knowledge unit not found"))
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("insight not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get knowledge: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get insight: %w", err))
 	}
-	return &consensusv1.KnowledgeServiceGetResponse{Unit: toProtoKnowledgeUnit(unit)}, nil
+	return &consensusv1.InsightServiceGetResponse{Insight: toProtoInsight(unit)}, nil
 }
 
-func (s *Service) Contribute(ctx context.Context, req *consensusv1.KnowledgeServiceContributeRequest) (*consensusv1.KnowledgeServiceContributeResponse, error) {
+func (s *Service) Create(ctx context.Context, req *consensusv1.InsightServiceCreateRequest) (*consensusv1.InsightServiceCreateResponse, error) {
 	unit, err := s.db.KnowledgeUnit.Create().
 		SetTenantKey(defaultTenantKey).
 		SetTitle(req.GetTitle()).
-		SetSummary(req.GetSummary()).
+		SetProblem(req.GetProblem()).
+		SetSummary(req.GetAnswer()).
+		SetExample(insightExampleToJSON(req.GetExample())).
 		SetDetail(req.GetDetail()).
 		SetAction(req.GetAction()).
-		SetKind(defaultString(req.GetKind(), "finding")).
-		SetLabels(req.GetLabels()).
+		SetKind(defaultString(req.GetKind(), "insight")).
+		SetLabels(req.GetTags()).
 		SetContext(req.GetContext()).
-		SetEvidenceRefs(evidenceRefsToJSON(req.GetEvidenceRefs())).
+		SetEvidenceRefs(insightLinksToJSON(req.GetLinks())).
 		Save(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create knowledge: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create insight: %w", err))
 	}
 
-	return &consensusv1.KnowledgeServiceContributeResponse{
-		Unit:          toProtoKnowledgeUnit(unit),
+	return &consensusv1.InsightServiceCreateResponse{
+		Insight:       toProtoInsight(unit),
 		PendingReview: false,
 	}, nil
 }
 
-func (s *Service) Update(ctx context.Context, req *consensusv1.KnowledgeServiceUpdateRequest) (*consensusv1.KnowledgeServiceUpdateResponse, error) {
+func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpdateRequest) (*consensusv1.InsightServiceUpdateResponse, error) {
 	id, err := uuid.Parse(req.GetId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid id: %w", err))
@@ -171,8 +182,14 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.KnowledgeServiceU
 	if req.GetTitle() != "" {
 		update.SetTitle(req.GetTitle())
 	}
-	if req.GetSummary() != "" {
-		update.SetSummary(req.GetSummary())
+	if req.GetProblem() != "" {
+		update.SetProblem(req.GetProblem())
+	}
+	if req.GetAnswer() != "" {
+		update.SetSummary(req.GetAnswer())
+	}
+	if req.GetExample() != nil {
+		update.SetExample(insightExampleToJSON(req.GetExample()))
 	}
 	if req.GetDetail() != "" {
 		update.SetDetail(req.GetDetail())
@@ -183,168 +200,87 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.KnowledgeServiceU
 	if req.GetKind() != "" {
 		update.SetKind(req.GetKind())
 	}
-	if req.GetLabels() != nil {
-		update.SetLabels(req.GetLabels())
+	if req.GetTags() != nil {
+		update.SetLabels(req.GetTags())
 	}
 	if req.GetContext() != nil {
 		update.SetContext(req.GetContext())
 	}
-	if req.GetEvidenceRefs() != nil {
-		update.SetEvidenceRefs(evidenceRefsToJSON(req.GetEvidenceRefs()))
+	if req.GetLinks() != nil {
+		update.SetEvidenceRefs(insightLinksToJSON(req.GetLinks()))
 	}
 
 	unit, err := update.Save(ctx)
 	if err != nil {
 		if postgres.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("knowledge unit not found"))
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("insight not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update knowledge: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update insight: %w", err))
 	}
-	return &consensusv1.KnowledgeServiceUpdateResponse{Unit: toProtoKnowledgeUnit(unit)}, nil
+	return &consensusv1.InsightServiceUpdateResponse{Insight: toProtoInsight(unit)}, nil
 }
 
-func (s *Service) Cast(ctx context.Context, req *consensusv1.VoteServiceCastRequest) (*consensusv1.VoteServiceCastResponse, error) {
-	knowledgeUnitID, err := uuid.Parse(req.GetKnowledgeUnitId())
+func (s *Service) RecordOutcome(ctx context.Context, req *consensusv1.InsightServiceRecordOutcomeRequest) (*consensusv1.InsightServiceRecordOutcomeResponse, error) {
+	outcome := strings.TrimSpace(req.GetOutcome())
+	if _, ok := validOutcomes[outcome]; !ok {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported outcome %q", outcome))
+	}
+
+	insightID, err := parseLocalInsightRef(req.GetInsightRef())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid knowledge_unit_id: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	created, err := s.db.Vote.Create().
 		SetTenantKey(defaultTenantKey).
-		SetKnowledgeUnitID(knowledgeUnitID).
-		SetOutcome(req.GetOutcome()).
+		SetKnowledgeUnitID(insightID).
+		SetOutcome(outcome).
 		SetConfidence(req.GetConfidence()).
 		SetRationale(req.GetRationale()).
 		SetNillableIdempotencyKey(nilIfEmpty(req.GetIdempotencyKey())).
 		Save(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("cast vote: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("record outcome: %w", err))
 	}
-	return &consensusv1.VoteServiceCastResponse{VoteId: created.ID.String()}, nil
+	return &consensusv1.InsightServiceRecordOutcomeResponse{OutcomeId: created.ID.String()}, nil
 }
 
-func (s *Service) Retract(ctx context.Context, req *consensusv1.VoteServiceRetractRequest) (*consensusv1.VoteServiceRetractResponse, error) {
-	id, err := uuid.Parse(req.GetVoteId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid vote_id: %w", err))
+func parseLocalInsightRef(ref string) (uuid.UUID, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return uuid.Nil, errors.New("insight ref is required")
 	}
-	if err := s.db.Vote.DeleteOneID(id).Exec(ctx); err != nil {
-		if postgres.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("vote not found"))
+
+	for _, prefix := range []string{"consensus://insight/"} {
+		if strings.HasPrefix(ref, prefix) {
+			ref = strings.TrimPrefix(ref, prefix)
+			break
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("retract vote: %w", err))
 	}
-	return &consensusv1.VoteServiceRetractResponse{}, nil
+
+	id, err := uuid.Parse(ref)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("unsupported insight ref %q: use a local UUID; federated refs require an upstream dispatcher", ref)
+	}
+	return id, nil
 }
 
-func (s *Service) Link(ctx context.Context, req *consensusv1.GraphServiceLinkRequest) (*consensusv1.GraphServiceLinkResponse, error) {
-	fromID, err := uuid.Parse(req.GetFromId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid from_id: %w", err))
-	}
-	toID, err := uuid.Parse(req.GetToId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid to_id: %w", err))
-	}
-
-	edge, err := s.db.GraphEdge.Create().
-		SetTenantKey(defaultTenantKey).
-		SetFromID(fromID).
-		SetToID(toID).
-		SetRelationship(req.GetRelationship()).
-		SetRationale(req.GetRationale()).
-		Save(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("link graph nodes: %w", err))
-	}
-	return &consensusv1.GraphServiceLinkResponse{EdgeId: edge.ID.String()}, nil
-}
-
-func (s *Service) Unlink(ctx context.Context, req *consensusv1.GraphServiceUnlinkRequest) (*consensusv1.GraphServiceUnlinkResponse, error) {
-	id, err := uuid.Parse(req.GetEdgeId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid edge_id: %w", err))
-	}
-	if err := s.db.GraphEdge.DeleteOneID(id).Exec(ctx); err != nil {
-		if postgres.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("graph edge not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unlink graph nodes: %w", err))
-	}
-	return &consensusv1.GraphServiceUnlinkResponse{}, nil
-}
-
-func (s *Service) Neighbors(ctx context.Context, req *consensusv1.GraphServiceNeighborsRequest) (*consensusv1.GraphServiceNeighborsResponse, error) {
-	nodeID, err := uuid.Parse(req.GetNodeId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid node_id: %w", err))
-	}
-	limit := int(req.GetLimit())
-	if limit <= 0 {
-		limit = 10
-	}
-
-	edges, err := s.db.GraphEdge.Query().
-		Where(
-			graphedge.TenantKey(defaultTenantKey),
-			graphedge.Or(graphedge.FromID(nodeID), graphedge.ToID(nodeID)),
-		).
-		Limit(limit).
-		All(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("query graph neighbors: %w", err))
-	}
-
-	return &consensusv1.GraphServiceNeighborsResponse{
-		Edges: toProtoGraphEdges(edges),
-	}, nil
-}
-
-func (s *Service) ExplainPath(ctx context.Context, req *consensusv1.GraphServiceExplainPathRequest) (*consensusv1.GraphServiceExplainPathResponse, error) {
-	fromID, err := uuid.Parse(req.GetFromId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid from_id: %w", err))
-	}
-	toID, err := uuid.Parse(req.GetToId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid to_id: %w", err))
-	}
-
-	edges, err := s.db.GraphEdge.Query().
-		Where(
-			graphedge.TenantKey(defaultTenantKey),
-			graphedge.FromID(fromID),
-			graphedge.ToID(toID),
-		).
-		All(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("explain graph path: %w", err))
-	}
-
-	explanation := "No direct path found."
-	if len(edges) > 0 {
-		explanation = "Direct graph edge found."
-	}
-	return &consensusv1.GraphServiceExplainPathResponse{
-		Explanation: explanation,
-		Edges:       toProtoGraphEdges(edges),
-	}, nil
-}
-
-func toProtoKnowledgeUnit(unit *postgres.KnowledgeUnit) *consensusv1.KnowledgeUnit {
+func toProtoInsight(unit *postgres.KnowledgeUnit) *consensusv1.Insight {
 	if unit == nil {
 		return nil
 	}
-	out := &consensusv1.KnowledgeUnit{
+	out := &consensusv1.Insight{
 		Id:             unit.ID.String(),
 		Title:          unit.Title,
-		Summary:        unit.Summary,
+		Problem:        unit.Problem,
+		Answer:         unit.Summary,
+		Example:        insightExampleFromJSON(unit.Example),
 		Detail:         unit.Detail,
 		Action:         unit.Action,
 		Kind:           unit.Kind,
-		Labels:         unit.Labels,
+		Tags:           unit.Labels,
 		Context:        unit.Context,
-		EvidenceRefs:   evidenceRefsFromJSON(unit.EvidenceRefs),
+		Links:          insightLinksFromJSON(unit.EvidenceRefs),
 		ReviewState:    unit.ReviewState,
 		LifecycleState: unit.LifecycleState,
 		CreatedAt:      timestamppb.New(unit.CreatedAt),
@@ -356,41 +292,61 @@ func toProtoKnowledgeUnit(unit *postgres.KnowledgeUnit) *consensusv1.KnowledgeUn
 	return out
 }
 
-func evidenceRefsToJSON(refs []*consensusv1.EvidenceRef) []map[string]string {
-	out := make([]map[string]string, 0, len(refs))
-	for _, ref := range refs {
+func insightExampleToJSON(example *consensusv1.InsightExample) map[string]string {
+	if example == nil {
+		return map[string]string{}
+	}
+	return map[string]string{
+		"kind":        example.GetKind(),
+		"language":    example.GetLanguage(),
+		"content":     example.GetContent(),
+		"command":     example.GetCommand(),
+		"description": example.GetDescription(),
+	}
+}
+
+func insightExampleFromJSON(example map[string]string) *consensusv1.InsightExample {
+	if len(example) == 0 {
+		return nil
+	}
+	out := &consensusv1.InsightExample{
+		Kind:        example["kind"],
+		Language:    example["language"],
+		Content:     example["content"],
+		Command:     example["command"],
+		Description: example["description"],
+	}
+	if out.GetKind() == "" && out.GetLanguage() == "" && out.GetContent() == "" && out.GetCommand() == "" && out.GetDescription() == "" {
+		return nil
+	}
+	return out
+}
+
+func insightLinksToJSON(links []*consensusv1.InsightLink) []map[string]string {
+	out := make([]map[string]string, 0, len(links))
+	for _, link := range links {
 		out = append(out, map[string]string{
-			"kind":    ref.GetKind(),
-			"title":   ref.GetTitle(),
-			"uri":     ref.GetUri(),
-			"excerpt": ref.GetExcerpt(),
+			"kind":        link.GetKind(),
+			"uri":         link.GetUri(),
+			"title":       link.GetTitle(),
+			"description": link.GetDescription(),
+			"relation":    link.GetRelation(),
+			"excerpt":     link.GetExcerpt(),
 		})
 	}
 	return out
 }
 
-func evidenceRefsFromJSON(refs []map[string]string) []*consensusv1.EvidenceRef {
-	out := make([]*consensusv1.EvidenceRef, 0, len(refs))
-	for _, ref := range refs {
-		out = append(out, &consensusv1.EvidenceRef{
-			Kind:    ref["kind"],
-			Title:   ref["title"],
-			Uri:     ref["uri"],
-			Excerpt: ref["excerpt"],
-		})
-	}
-	return out
-}
-
-func toProtoGraphEdges(edges []*postgres.GraphEdge) []*consensusv1.GraphEdge {
-	out := make([]*consensusv1.GraphEdge, 0, len(edges))
-	for _, edge := range edges {
-		out = append(out, &consensusv1.GraphEdge{
-			Id:           edge.ID.String(),
-			FromId:       edge.FromID.String(),
-			ToId:         edge.ToID.String(),
-			Relationship: edge.Relationship,
-			Rationale:    edge.Rationale,
+func insightLinksFromJSON(links []map[string]string) []*consensusv1.InsightLink {
+	out := make([]*consensusv1.InsightLink, 0, len(links))
+	for _, link := range links {
+		out = append(out, &consensusv1.InsightLink{
+			Kind:        link["kind"],
+			Uri:         link["uri"],
+			Title:       link["title"],
+			Description: link["description"],
+			Relation:    link["relation"],
+			Excerpt:     link["excerpt"],
 		})
 	}
 	return out

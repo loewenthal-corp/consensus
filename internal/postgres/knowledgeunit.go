@@ -23,8 +23,12 @@ type KnowledgeUnit struct {
 	TenantKey string `json:"tenant_key,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// Problem holds the value of the "problem" field.
+	Problem string `json:"problem,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
+	// Example holds the value of the "example" field.
+	Example map[string]string `json:"example,omitempty"`
 	// Detail holds the value of the "detail" field.
 	Detail string `json:"detail,omitempty"`
 	// Action holds the value of the "action" field.
@@ -63,9 +67,9 @@ func (*KnowledgeUnit) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case knowledgeunit.FieldCreatedByActorID, knowledgeunit.FieldSupersededByID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case knowledgeunit.FieldLabels, knowledgeunit.FieldContext, knowledgeunit.FieldEvidenceRefs:
+		case knowledgeunit.FieldExample, knowledgeunit.FieldLabels, knowledgeunit.FieldContext, knowledgeunit.FieldEvidenceRefs:
 			values[i] = new([]byte)
-		case knowledgeunit.FieldTenantKey, knowledgeunit.FieldTitle, knowledgeunit.FieldSummary, knowledgeunit.FieldDetail, knowledgeunit.FieldAction, knowledgeunit.FieldKind, knowledgeunit.FieldSourceRunID, knowledgeunit.FieldReviewState, knowledgeunit.FieldLifecycleState:
+		case knowledgeunit.FieldTenantKey, knowledgeunit.FieldTitle, knowledgeunit.FieldProblem, knowledgeunit.FieldSummary, knowledgeunit.FieldDetail, knowledgeunit.FieldAction, knowledgeunit.FieldKind, knowledgeunit.FieldSourceRunID, knowledgeunit.FieldReviewState, knowledgeunit.FieldLifecycleState:
 			values[i] = new(sql.NullString)
 		case knowledgeunit.FieldLastConfirmedAt, knowledgeunit.FieldCreatedAt, knowledgeunit.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -104,11 +108,25 @@ func (_m *KnowledgeUnit) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Title = value.String
 			}
+		case knowledgeunit.FieldProblem:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field problem", values[i])
+			} else if value.Valid {
+				_m.Problem = value.String
+			}
 		case knowledgeunit.FieldSummary:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field summary", values[i])
 			} else if value.Valid {
 				_m.Summary = value.String
+			}
+		case knowledgeunit.FieldExample:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field example", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Example); err != nil {
+					return fmt.Errorf("unmarshal field example: %w", err)
+				}
 			}
 		case knowledgeunit.FieldDetail:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -246,8 +264,14 @@ func (_m *KnowledgeUnit) String() string {
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
+	builder.WriteString("problem=")
+	builder.WriteString(_m.Problem)
+	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(_m.Summary)
+	builder.WriteString(", ")
+	builder.WriteString("example=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Example))
 	builder.WriteString(", ")
 	builder.WriteString("detail=")
 	builder.WriteString(_m.Detail)

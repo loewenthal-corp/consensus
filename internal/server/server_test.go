@@ -14,7 +14,7 @@ import (
 )
 
 func TestServer_HealthAndAdmin(t *testing.T) {
-	handler, err := server.New(server.Config{Service: consensus.NewService(nil)})
+	handler, err := server.NewAPI(server.Config{Service: consensus.NewService(nil)})
 	require.NoError(t, err)
 
 	rec := httptest.NewRecorder()
@@ -28,10 +28,15 @@ func TestServer_HealthAndAdmin(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Contains(t, rec.Body.String(), "Consensus Admin")
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNotFound, rec.Code)
 }
 
-func TestServer_MCPListsGeneratedTools(t *testing.T) {
-	handler, err := server.New(server.Config{Service: consensus.NewService(nil)})
+func TestServer_MCPListsAllowlistedTools(t *testing.T) {
+	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
 	require.NoError(t, err)
 
 	body := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`)
@@ -75,7 +80,26 @@ func TestServer_MCPListsGeneratedTools(t *testing.T) {
 	respBody, err = io.ReadAll(rec.Body)
 	require.NoError(t, err)
 	text := string(respBody)
-	require.Contains(t, text, "consensus_v1_KnowledgeService_Search")
-	require.Contains(t, text, "Search returns ranked knowledge units")
-	require.Contains(t, text, "rediscovering an answer")
+	require.Contains(t, text, "consensus_v1_InsightService_Search")
+	require.Contains(t, text, "consensus_v1_InsightService_Get")
+	require.Contains(t, text, "consensus_v1_InsightService_Create")
+	require.Contains(t, text, "consensus_v1_InsightService_RecordOutcome")
+	require.Contains(t, text, "Search returns ranked insights")
+	require.Contains(t, text, "smallest concrete example")
+	require.NotContains(t, text, "consensus_v1_InsightService_Update")
+	require.NotContains(t, text, "KnowledgeService")
+	require.NotContains(t, text, "VoteService")
+	require.NotContains(t, text, "GraphService")
+}
+
+func TestServer_MCPDoesNotServeAPIOrAdmin(t *testing.T) {
+	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
+	require.NoError(t, err)
+
+	for _, path := range []string{"/admin/", "/healthz", "/consensus.v1.InsightService/Search"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		handler.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusNotFound, rec.Code)
+	}
 }

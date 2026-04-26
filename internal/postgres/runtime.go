@@ -375,7 +375,7 @@ func init() {
 		}
 	}()
 	// knowledgeunitDescSummary is the schema descriptor for summary field.
-	knowledgeunitDescSummary := knowledgeunitFields[3].Descriptor()
+	knowledgeunitDescSummary := knowledgeunitFields[4].Descriptor()
 	// knowledgeunit.SummaryValidator is a validator for the "summary" field. It is called by the builders before save.
 	knowledgeunit.SummaryValidator = func() func(string) error {
 		validators := knowledgeunitDescSummary.Validators
@@ -393,7 +393,7 @@ func init() {
 		}
 	}()
 	// knowledgeunitDescKind is the schema descriptor for kind field.
-	knowledgeunitDescKind := knowledgeunitFields[6].Descriptor()
+	knowledgeunitDescKind := knowledgeunitFields[8].Descriptor()
 	// knowledgeunit.DefaultKind holds the default value on creation for the kind field.
 	knowledgeunit.DefaultKind = knowledgeunitDescKind.Default.(string)
 	// knowledgeunit.KindValidator is a validator for the "kind" field. It is called by the builders before save.
@@ -413,11 +413,11 @@ func init() {
 		}
 	}()
 	// knowledgeunitDescSourceRunID is the schema descriptor for source_run_id field.
-	knowledgeunitDescSourceRunID := knowledgeunitFields[11].Descriptor()
+	knowledgeunitDescSourceRunID := knowledgeunitFields[13].Descriptor()
 	// knowledgeunit.SourceRunIDValidator is a validator for the "source_run_id" field. It is called by the builders before save.
 	knowledgeunit.SourceRunIDValidator = knowledgeunitDescSourceRunID.Validators[0].(func(string) error)
 	// knowledgeunitDescReviewState is the schema descriptor for review_state field.
-	knowledgeunitDescReviewState := knowledgeunitFields[12].Descriptor()
+	knowledgeunitDescReviewState := knowledgeunitFields[14].Descriptor()
 	// knowledgeunit.DefaultReviewState holds the default value on creation for the review_state field.
 	knowledgeunit.DefaultReviewState = knowledgeunitDescReviewState.Default.(string)
 	// knowledgeunit.ReviewStateValidator is a validator for the "review_state" field. It is called by the builders before save.
@@ -437,7 +437,7 @@ func init() {
 		}
 	}()
 	// knowledgeunitDescLifecycleState is the schema descriptor for lifecycle_state field.
-	knowledgeunitDescLifecycleState := knowledgeunitFields[13].Descriptor()
+	knowledgeunitDescLifecycleState := knowledgeunitFields[15].Descriptor()
 	// knowledgeunit.DefaultLifecycleState holds the default value on creation for the lifecycle_state field.
 	knowledgeunit.DefaultLifecycleState = knowledgeunitDescLifecycleState.Default.(string)
 	// knowledgeunit.LifecycleStateValidator is a validator for the "lifecycle_state" field. It is called by the builders before save.
@@ -457,11 +457,11 @@ func init() {
 		}
 	}()
 	// knowledgeunitDescCreatedAt is the schema descriptor for created_at field.
-	knowledgeunitDescCreatedAt := knowledgeunitFields[16].Descriptor()
+	knowledgeunitDescCreatedAt := knowledgeunitFields[18].Descriptor()
 	// knowledgeunit.DefaultCreatedAt holds the default value on creation for the created_at field.
 	knowledgeunit.DefaultCreatedAt = knowledgeunitDescCreatedAt.Default.(func() time.Time)
 	// knowledgeunitDescUpdatedAt is the schema descriptor for updated_at field.
-	knowledgeunitDescUpdatedAt := knowledgeunitFields[17].Descriptor()
+	knowledgeunitDescUpdatedAt := knowledgeunitFields[19].Descriptor()
 	// knowledgeunit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	knowledgeunit.DefaultUpdatedAt = knowledgeunitDescUpdatedAt.Default.(func() time.Time)
 	// knowledgeunit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

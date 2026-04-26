@@ -65,6 +65,11 @@ func Title(v string) predicate.KnowledgeUnit {
 	return predicate.KnowledgeUnit(sql.FieldEQ(FieldTitle, v))
 }
 
+// Problem applies equality check predicate on the "problem" field. It's identical to ProblemEQ.
+func Problem(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldEQ(FieldProblem, v))
+}
+
 // Summary applies equality check predicate on the "summary" field. It's identical to SummaryEQ.
 func Summary(v string) predicate.KnowledgeUnit {
 	return predicate.KnowledgeUnit(sql.FieldEQ(FieldSummary, v))
@@ -255,6 +260,81 @@ func TitleContainsFold(v string) predicate.KnowledgeUnit {
 	return predicate.KnowledgeUnit(sql.FieldContainsFold(FieldTitle, v))
 }
 
+// ProblemEQ applies the EQ predicate on the "problem" field.
+func ProblemEQ(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldEQ(FieldProblem, v))
+}
+
+// ProblemNEQ applies the NEQ predicate on the "problem" field.
+func ProblemNEQ(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldNEQ(FieldProblem, v))
+}
+
+// ProblemIn applies the In predicate on the "problem" field.
+func ProblemIn(vs ...string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldIn(FieldProblem, vs...))
+}
+
+// ProblemNotIn applies the NotIn predicate on the "problem" field.
+func ProblemNotIn(vs ...string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldNotIn(FieldProblem, vs...))
+}
+
+// ProblemGT applies the GT predicate on the "problem" field.
+func ProblemGT(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldGT(FieldProblem, v))
+}
+
+// ProblemGTE applies the GTE predicate on the "problem" field.
+func ProblemGTE(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldGTE(FieldProblem, v))
+}
+
+// ProblemLT applies the LT predicate on the "problem" field.
+func ProblemLT(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldLT(FieldProblem, v))
+}
+
+// ProblemLTE applies the LTE predicate on the "problem" field.
+func ProblemLTE(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldLTE(FieldProblem, v))
+}
+
+// ProblemContains applies the Contains predicate on the "problem" field.
+func ProblemContains(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldContains(FieldProblem, v))
+}
+
+// ProblemHasPrefix applies the HasPrefix predicate on the "problem" field.
+func ProblemHasPrefix(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldHasPrefix(FieldProblem, v))
+}
+
+// ProblemHasSuffix applies the HasSuffix predicate on the "problem" field.
+func ProblemHasSuffix(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldHasSuffix(FieldProblem, v))
+}
+
+// ProblemIsNil applies the IsNil predicate on the "problem" field.
+func ProblemIsNil() predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldIsNull(FieldProblem))
+}
+
+// ProblemNotNil applies the NotNil predicate on the "problem" field.
+func ProblemNotNil() predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldNotNull(FieldProblem))
+}
+
+// ProblemEqualFold applies the EqualFold predicate on the "problem" field.
+func ProblemEqualFold(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldEqualFold(FieldProblem, v))
+}
+
+// ProblemContainsFold applies the ContainsFold predicate on the "problem" field.
+func ProblemContainsFold(v string) predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldContainsFold(FieldProblem, v))
+}
+
 // SummaryEQ applies the EQ predicate on the "summary" field.
 func SummaryEQ(v string) predicate.KnowledgeUnit {
 	return predicate.KnowledgeUnit(sql.FieldEQ(FieldSummary, v))
@@ -318,6 +398,16 @@ func SummaryEqualFold(v string) predicate.KnowledgeUnit {
 // SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
 func SummaryContainsFold(v string) predicate.KnowledgeUnit {
 	return predicate.KnowledgeUnit(sql.FieldContainsFold(FieldSummary, v))
+}
+
+// ExampleIsNil applies the IsNil predicate on the "example" field.
+func ExampleIsNil() predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldIsNull(FieldExample))
+}
+
+// ExampleNotNil applies the NotNil predicate on the "example" field.
+func ExampleNotNil() predicate.KnowledgeUnit {
+	return predicate.KnowledgeUnit(sql.FieldNotNull(FieldExample))
 }
 
 // DetailEQ applies the EQ predicate on the "detail" field.

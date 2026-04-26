@@ -44,9 +44,29 @@ func (_c *KnowledgeUnitCreate) SetTitle(v string) *KnowledgeUnitCreate {
 	return _c
 }
 
+// SetProblem sets the "problem" field.
+func (_c *KnowledgeUnitCreate) SetProblem(v string) *KnowledgeUnitCreate {
+	_c.mutation.SetProblem(v)
+	return _c
+}
+
+// SetNillableProblem sets the "problem" field if the given value is not nil.
+func (_c *KnowledgeUnitCreate) SetNillableProblem(v *string) *KnowledgeUnitCreate {
+	if v != nil {
+		_c.SetProblem(*v)
+	}
+	return _c
+}
+
 // SetSummary sets the "summary" field.
 func (_c *KnowledgeUnitCreate) SetSummary(v string) *KnowledgeUnitCreate {
 	_c.mutation.SetSummary(v)
+	return _c
+}
+
+// SetExample sets the "example" field.
+func (_c *KnowledgeUnitCreate) SetExample(v map[string]string) *KnowledgeUnitCreate {
+	_c.mutation.SetExample(v)
 	return _c
 }
 
@@ -406,9 +426,17 @@ func (_c *KnowledgeUnitCreate) createSpec() (*KnowledgeUnit, *sqlgraph.CreateSpe
 		_spec.SetField(knowledgeunit.FieldTitle, field.TypeString, value)
 		_node.Title = value
 	}
+	if value, ok := _c.mutation.Problem(); ok {
+		_spec.SetField(knowledgeunit.FieldProblem, field.TypeString, value)
+		_node.Problem = value
+	}
 	if value, ok := _c.mutation.Summary(); ok {
 		_spec.SetField(knowledgeunit.FieldSummary, field.TypeString, value)
 		_node.Summary = value
+	}
+	if value, ok := _c.mutation.Example(); ok {
+		_spec.SetField(knowledgeunit.FieldExample, field.TypeJSON, value)
+		_node.Example = value
 	}
 	if value, ok := _c.mutation.Detail(); ok {
 		_spec.SetField(knowledgeunit.FieldDetail, field.TypeString, value)
@@ -542,6 +570,24 @@ func (u *KnowledgeUnitUpsert) UpdateTitle() *KnowledgeUnitUpsert {
 	return u
 }
 
+// SetProblem sets the "problem" field.
+func (u *KnowledgeUnitUpsert) SetProblem(v string) *KnowledgeUnitUpsert {
+	u.Set(knowledgeunit.FieldProblem, v)
+	return u
+}
+
+// UpdateProblem sets the "problem" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsert) UpdateProblem() *KnowledgeUnitUpsert {
+	u.SetExcluded(knowledgeunit.FieldProblem)
+	return u
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (u *KnowledgeUnitUpsert) ClearProblem() *KnowledgeUnitUpsert {
+	u.SetNull(knowledgeunit.FieldProblem)
+	return u
+}
+
 // SetSummary sets the "summary" field.
 func (u *KnowledgeUnitUpsert) SetSummary(v string) *KnowledgeUnitUpsert {
 	u.Set(knowledgeunit.FieldSummary, v)
@@ -551,6 +597,24 @@ func (u *KnowledgeUnitUpsert) SetSummary(v string) *KnowledgeUnitUpsert {
 // UpdateSummary sets the "summary" field to the value that was provided on create.
 func (u *KnowledgeUnitUpsert) UpdateSummary() *KnowledgeUnitUpsert {
 	u.SetExcluded(knowledgeunit.FieldSummary)
+	return u
+}
+
+// SetExample sets the "example" field.
+func (u *KnowledgeUnitUpsert) SetExample(v map[string]string) *KnowledgeUnitUpsert {
+	u.Set(knowledgeunit.FieldExample, v)
+	return u
+}
+
+// UpdateExample sets the "example" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsert) UpdateExample() *KnowledgeUnitUpsert {
+	u.SetExcluded(knowledgeunit.FieldExample)
+	return u
+}
+
+// ClearExample clears the value of the "example" field.
+func (u *KnowledgeUnitUpsert) ClearExample() *KnowledgeUnitUpsert {
+	u.SetNull(knowledgeunit.FieldExample)
 	return u
 }
 
@@ -843,6 +907,27 @@ func (u *KnowledgeUnitUpsertOne) UpdateTitle() *KnowledgeUnitUpsertOne {
 	})
 }
 
+// SetProblem sets the "problem" field.
+func (u *KnowledgeUnitUpsertOne) SetProblem(v string) *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.SetProblem(v)
+	})
+}
+
+// UpdateProblem sets the "problem" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsertOne) UpdateProblem() *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.UpdateProblem()
+	})
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (u *KnowledgeUnitUpsertOne) ClearProblem() *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.ClearProblem()
+	})
+}
+
 // SetSummary sets the "summary" field.
 func (u *KnowledgeUnitUpsertOne) SetSummary(v string) *KnowledgeUnitUpsertOne {
 	return u.Update(func(s *KnowledgeUnitUpsert) {
@@ -854,6 +939,27 @@ func (u *KnowledgeUnitUpsertOne) SetSummary(v string) *KnowledgeUnitUpsertOne {
 func (u *KnowledgeUnitUpsertOne) UpdateSummary() *KnowledgeUnitUpsertOne {
 	return u.Update(func(s *KnowledgeUnitUpsert) {
 		s.UpdateSummary()
+	})
+}
+
+// SetExample sets the "example" field.
+func (u *KnowledgeUnitUpsertOne) SetExample(v map[string]string) *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.SetExample(v)
+	})
+}
+
+// UpdateExample sets the "example" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsertOne) UpdateExample() *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.UpdateExample()
+	})
+}
+
+// ClearExample clears the value of the "example" field.
+func (u *KnowledgeUnitUpsertOne) ClearExample() *KnowledgeUnitUpsertOne {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.ClearExample()
 	})
 }
 
@@ -1348,6 +1454,27 @@ func (u *KnowledgeUnitUpsertBulk) UpdateTitle() *KnowledgeUnitUpsertBulk {
 	})
 }
 
+// SetProblem sets the "problem" field.
+func (u *KnowledgeUnitUpsertBulk) SetProblem(v string) *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.SetProblem(v)
+	})
+}
+
+// UpdateProblem sets the "problem" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsertBulk) UpdateProblem() *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.UpdateProblem()
+	})
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (u *KnowledgeUnitUpsertBulk) ClearProblem() *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.ClearProblem()
+	})
+}
+
 // SetSummary sets the "summary" field.
 func (u *KnowledgeUnitUpsertBulk) SetSummary(v string) *KnowledgeUnitUpsertBulk {
 	return u.Update(func(s *KnowledgeUnitUpsert) {
@@ -1359,6 +1486,27 @@ func (u *KnowledgeUnitUpsertBulk) SetSummary(v string) *KnowledgeUnitUpsertBulk 
 func (u *KnowledgeUnitUpsertBulk) UpdateSummary() *KnowledgeUnitUpsertBulk {
 	return u.Update(func(s *KnowledgeUnitUpsert) {
 		s.UpdateSummary()
+	})
+}
+
+// SetExample sets the "example" field.
+func (u *KnowledgeUnitUpsertBulk) SetExample(v map[string]string) *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.SetExample(v)
+	})
+}
+
+// UpdateExample sets the "example" field to the value that was provided on create.
+func (u *KnowledgeUnitUpsertBulk) UpdateExample() *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.UpdateExample()
+	})
+}
+
+// ClearExample clears the value of the "example" field.
+func (u *KnowledgeUnitUpsertBulk) ClearExample() *KnowledgeUnitUpsertBulk {
+	return u.Update(func(s *KnowledgeUnitUpsert) {
+		s.ClearExample()
 	})
 }
 

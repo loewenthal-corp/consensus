@@ -58,6 +58,26 @@ func (_u *KnowledgeUnitUpdate) SetNillableTitle(v *string) *KnowledgeUnitUpdate 
 	return _u
 }
 
+// SetProblem sets the "problem" field.
+func (_u *KnowledgeUnitUpdate) SetProblem(v string) *KnowledgeUnitUpdate {
+	_u.mutation.SetProblem(v)
+	return _u
+}
+
+// SetNillableProblem sets the "problem" field if the given value is not nil.
+func (_u *KnowledgeUnitUpdate) SetNillableProblem(v *string) *KnowledgeUnitUpdate {
+	if v != nil {
+		_u.SetProblem(*v)
+	}
+	return _u
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (_u *KnowledgeUnitUpdate) ClearProblem() *KnowledgeUnitUpdate {
+	_u.mutation.ClearProblem()
+	return _u
+}
+
 // SetSummary sets the "summary" field.
 func (_u *KnowledgeUnitUpdate) SetSummary(v string) *KnowledgeUnitUpdate {
 	_u.mutation.SetSummary(v)
@@ -69,6 +89,18 @@ func (_u *KnowledgeUnitUpdate) SetNillableSummary(v *string) *KnowledgeUnitUpdat
 	if v != nil {
 		_u.SetSummary(*v)
 	}
+	return _u
+}
+
+// SetExample sets the "example" field.
+func (_u *KnowledgeUnitUpdate) SetExample(v map[string]string) *KnowledgeUnitUpdate {
+	_u.mutation.SetExample(v)
+	return _u
+}
+
+// ClearExample clears the value of the "example" field.
+func (_u *KnowledgeUnitUpdate) ClearExample() *KnowledgeUnitUpdate {
+	_u.mutation.ClearExample()
 	return _u
 }
 
@@ -387,8 +419,20 @@ func (_u *KnowledgeUnitUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgeunit.FieldTitle, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Problem(); ok {
+		_spec.SetField(knowledgeunit.FieldProblem, field.TypeString, value)
+	}
+	if _u.mutation.ProblemCleared() {
+		_spec.ClearField(knowledgeunit.FieldProblem, field.TypeString)
+	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(knowledgeunit.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Example(); ok {
+		_spec.SetField(knowledgeunit.FieldExample, field.TypeJSON, value)
+	}
+	if _u.mutation.ExampleCleared() {
+		_spec.ClearField(knowledgeunit.FieldExample, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Detail(); ok {
 		_spec.SetField(knowledgeunit.FieldDetail, field.TypeString, value)
@@ -514,6 +558,26 @@ func (_u *KnowledgeUnitUpdateOne) SetNillableTitle(v *string) *KnowledgeUnitUpda
 	return _u
 }
 
+// SetProblem sets the "problem" field.
+func (_u *KnowledgeUnitUpdateOne) SetProblem(v string) *KnowledgeUnitUpdateOne {
+	_u.mutation.SetProblem(v)
+	return _u
+}
+
+// SetNillableProblem sets the "problem" field if the given value is not nil.
+func (_u *KnowledgeUnitUpdateOne) SetNillableProblem(v *string) *KnowledgeUnitUpdateOne {
+	if v != nil {
+		_u.SetProblem(*v)
+	}
+	return _u
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (_u *KnowledgeUnitUpdateOne) ClearProblem() *KnowledgeUnitUpdateOne {
+	_u.mutation.ClearProblem()
+	return _u
+}
+
 // SetSummary sets the "summary" field.
 func (_u *KnowledgeUnitUpdateOne) SetSummary(v string) *KnowledgeUnitUpdateOne {
 	_u.mutation.SetSummary(v)
@@ -525,6 +589,18 @@ func (_u *KnowledgeUnitUpdateOne) SetNillableSummary(v *string) *KnowledgeUnitUp
 	if v != nil {
 		_u.SetSummary(*v)
 	}
+	return _u
+}
+
+// SetExample sets the "example" field.
+func (_u *KnowledgeUnitUpdateOne) SetExample(v map[string]string) *KnowledgeUnitUpdateOne {
+	_u.mutation.SetExample(v)
+	return _u
+}
+
+// ClearExample clears the value of the "example" field.
+func (_u *KnowledgeUnitUpdateOne) ClearExample() *KnowledgeUnitUpdateOne {
+	_u.mutation.ClearExample()
 	return _u
 }
 
@@ -873,8 +949,20 @@ func (_u *KnowledgeUnitUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgeunit.FieldTitle, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Problem(); ok {
+		_spec.SetField(knowledgeunit.FieldProblem, field.TypeString, value)
+	}
+	if _u.mutation.ProblemCleared() {
+		_spec.ClearField(knowledgeunit.FieldProblem, field.TypeString)
+	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(knowledgeunit.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Example(); ok {
+		_spec.SetField(knowledgeunit.FieldExample, field.TypeJSON, value)
+	}
+	if _u.mutation.ExampleCleared() {
+		_spec.ClearField(knowledgeunit.FieldExample, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Detail(); ok {
 		_spec.SetField(knowledgeunit.FieldDetail, field.TypeString, value)

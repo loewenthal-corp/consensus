@@ -153,7 +153,9 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "tenant_key", Type: field.TypeString, Size: 255, Default: "default"},
 		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "problem", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "summary", Type: field.TypeString, Size: 1000},
+		{Name: "example", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "detail", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "action", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "kind", Type: field.TypeString, Size: 100, Default: "finding"},
@@ -183,12 +185,12 @@ var (
 			{
 				Name:    "knowledgeunit_tenant_key_review_state",
 				Unique:  false,
-				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[12]},
+				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[14]},
 			},
 			{
 				Name:    "knowledgeunit_tenant_key_lifecycle_state",
 				Unique:  false,
-				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[13]},
+				Columns: []*schema.Column{KnowledgeUnitsColumns[1], KnowledgeUnitsColumns[15]},
 			},
 		},
 	}

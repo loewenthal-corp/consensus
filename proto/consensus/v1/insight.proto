@@ -1,0 +1,281 @@
+syntax = "proto3";
+
+package consensus.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// InsightService defines API operations for finding, creating, editing, and
+// scoring reusable insights. The default MCP listener exposes only the
+// search/get/create/outcome subset.
+service InsightService {
+  // Search returns ranked insights for a problem statement, exact error,
+  // failing command, stack trace, snippet, or repo/tool context. Include the
+  // smallest concrete example available when it helps identify the issue.
+  rpc Search(InsightServiceSearchRequest) returns (InsightServiceSearchResponse);
+
+  // Get returns one insight by local ID or federated reference.
+  rpc Get(InsightServiceGetRequest) returns (InsightServiceGetResponse);
+
+  // Create submits a candidate insight after a thread discovers a durable
+  // answer. Store the distilled situation, answer, action, optional example,
+  // and useful links instead of pasting a whole conversation.
+  rpc Create(InsightServiceCreateRequest) returns (InsightServiceCreateResponse);
+
+  // Update amends an existing local insight when it needs clearer wording,
+  // fresher links, corrected context, or revised guidance.
+  rpc Update(InsightServiceUpdateRequest) returns (InsightServiceUpdateResponse);
+
+  // RecordOutcome records whether an insight worked after it was applied.
+  // Use did_not_work only when the insight appeared to match the problem and
+  // the suggested action was tried but failed, not when the result was merely
+  // irrelevant to the search.
+  rpc RecordOutcome(InsightServiceRecordOutcomeRequest) returns (InsightServiceRecordOutcomeResponse);
+}
+
+// Insight is the durable answer-shaped artifact Consensus stores. It should be
+// compact enough for an agent to read into context and structured enough for
+// retrieval, review, linking, and outcome-based ranking.
+message Insight {
+  // Stable local UUID for this insight.
+  string id = 1;
+  // Human-readable title for scanning search results and review queues.
+  string title = 2;
+  // Problem, symptom, exact error, or situation where this insight applies.
+  string problem = 3;
+  // Direct reusable answer or lesson learned.
+  string answer = 4;
+  // Optional concrete example, such as a snippet, command, config, or error.
+  InsightExample example = 5;
+  // Concrete next step an agent should take when this insight applies.
+  string action = 6;
+  // Longer explanation with constraints, caveats, or reasoning.
+  string detail = 7;
+  // Category such as pitfall, workaround, runbook, root_cause, policy, or fix.
+  string kind = 8;
+  // Optional retrieval tags for technologies, products, tools, services, or concepts.
+  repeated string tags = 9;
+  // Structured context for matching and filtering, for example language=go,
+  // framework=nextjs, repo_area=admin-ui, service=posthog, or platform=kubernetes.
+  map<string, string> context = 10;
+  // Useful links: docs, source threads, related insights, issues, traces, test
+  // proof, or relationship links. Links can carry graph-like relation semantics
+  // without exposing graph operations through the default MCP surface.
+  repeated InsightLink links = 11;
+  // Moderation/review state such as approved, pending, disputed, or rejected.
+  string review_state = 12;
+  // Lifecycle state such as active, stale, superseded, archived, or deleted.
+  string lifecycle_state = 13;
+  // Creation timestamp assigned by the server.
+  google.protobuf.Timestamp created_at = 14;
+  // Last update timestamp assigned by the server.
+  google.protobuf.Timestamp updated_at = 15;
+  // Last time a solved/helpful outcome or review process confirmed this insight.
+  google.protobuf.Timestamp last_confirmed_at = 16;
+  // Origin is empty for local insights and populated for federated results.
+  InsightOrigin origin = 17;
+}
+
+// InsightExample captures an optional reproduction, snippet, command, config,
+// exact error, or other concrete example that helps match the insight later.
+message InsightExample {
+  // Example type such as code, command, config, error, log, or trace.
+  string kind = 1 [(buf.validate.field).string.max_len = 100];
+  // Optional language or format, such as go, typescript, yaml, bash, or text.
+  string language = 2 [(buf.validate.field).string.max_len = 100];
+  // Example content. Keep this small and directly relevant.
+  string content = 3 [(buf.validate.field).string.max_len = 12000];
+  // Optional command associated with the example.
+  string command = 4 [(buf.validate.field).string.max_len = 1000];
+  // Short note describing what the example demonstrates.
+  string description = 5 [(buf.validate.field).string.max_len = 1000];
+}
+
+// InsightLink points to material that helps verify, understand, trace, or relate
+// an insight.
+message InsightLink {
+  // Link type such as docs, related_insight, issue, pull_request, source_thread,
+  // evidence, test, trace, log, or ticket.
+  string kind = 1 [(buf.validate.field).string.max_len = 100];
+  // Optional URI for a source document, issue, thread, trace, file, or resource.
+  string uri = 2 [(buf.validate.field).string.max_len = 2000];
+  // Short label for the link.
+  string title = 3 [(buf.validate.field).string.max_len = 255];
+  // What this link helps verify or understand.
+  string description = 4 [(buf.validate.field).string.max_len = 1000];
+  // Optional relationship when the link connects to another insight or issue,
+  // such as related, same_root_cause, supersedes, requires, or contradicts.
+  string relation = 5 [(buf.validate.field).string.max_len = 100];
+  // Small relevant excerpt. Avoid storing whole conversations or large logs.
+  string excerpt = 6 [(buf.validate.field).string.max_len = 4000];
+}
+
+// InsightOrigin identifies where a federated insight came from.
+message InsightOrigin {
+  // Stable upstream instance key.
+  string instance = 1;
+  // Human-readable upstream instance name.
+  string display_name = 2;
+  // Upstream-local insight ID.
+  string remote_id = 3;
+  // Stable URI for opening or fetching the source insight when authorized.
+  string uri = 4;
+}
+
+// InsightServiceSearchRequest asks Consensus for previously proven context that
+// may apply to the current problem.
+message InsightServiceSearchRequest {
+  // Natural-language problem statement, exact error text, stack trace, failing
+  // command, snippet, or task description. This is required and should include
+  // the most specific symptom available.
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Optional retrieval tags to narrow results to a stack, tool, service, repo,
+  // or environment.
+  repeated string tags = 2;
+  // Optional structured context for matching and filtering, such as language,
+  // framework, version, platform, repo area, service, or deployment target.
+  map<string, string> context = 3;
+  // Maximum number of results. The server chooses a practical default when zero.
+  int32 limit = 4 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 50
+  }];
+  // Whether the server may include configured read-through upstream instances.
+  bool include_upstreams = 5;
+}
+
+// InsightServiceSearchResponse returns ranked matches with ranking rationale.
+message InsightServiceSearchResponse {
+  repeated InsightSearchResult results = 1;
+}
+
+// InsightSearchResult wraps a candidate insight with scoring details so an agent
+// can decide whether and how strongly to use it.
+message InsightSearchResult {
+  // Matched insight.
+  Insight insight = 1;
+  // Relative ranking score assigned by the retrieval layer.
+  double score = 2;
+  // Short explanation of why this insight ranked where it did.
+  string rank_reason = 3;
+  // Signals that matched, such as text, tag, context, outcome, relation, or vector.
+  repeated string matched_signals = 4;
+}
+
+// InsightServiceGetRequest fetches one stored insight.
+message InsightServiceGetRequest {
+  // Local UUID or federated consensus URI.
+  string ref = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// InsightServiceGetResponse contains the requested insight.
+message InsightServiceGetResponse {
+  Insight insight = 1;
+}
+
+// InsightServiceCreateRequest submits a durable answer after a thread produces
+// something later agents should reuse.
+message InsightServiceCreateRequest {
+  // Human-readable title for the reusable insight.
+  string title = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  // Problem, symptom, exact error, or situation where this insight applies.
+  string problem = 2 [(buf.validate.field).string.max_len = 4000];
+  // Direct answer or lesson learned.
+  string answer = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 1000
+  }];
+  // Optional concrete example, such as a snippet, command, config, or error.
+  InsightExample example = 4;
+  // Concrete action future agents should take when this insight applies.
+  string action = 5 [(buf.validate.field).string.max_len = 4000];
+  // Longer explanation of the symptom, context, constraints, or reasoning.
+  string detail = 6 [(buf.validate.field).string.max_len = 12000];
+  // Category such as pitfall, workaround, runbook, root_cause, policy, or fix.
+  string kind = 7 [(buf.validate.field).string.max_len = 100];
+  // Optional retrieval tags for the stack, tool, service, repo, or error family.
+  repeated string tags = 8;
+  // Structured context for matching and filtering.
+  map<string, string> context = 9;
+  // Useful docs, related insights, source threads, issues, traces, or evidence.
+  repeated InsightLink links = 10;
+  // Optional client-supplied key for deduplicating retries.
+  string idempotency_key = 11 [(buf.validate.field).string.max_len = 255];
+}
+
+// InsightServiceCreateResponse returns the created insight and whether human or
+// policy review is still required before it should influence retrieval.
+message InsightServiceCreateResponse {
+  Insight insight = 1;
+  bool pending_review = 2;
+}
+
+// InsightServiceUpdateRequest amends an existing local insight. Empty scalar
+// fields are treated as omitted by the first implementation; repeated and map
+// fields replace existing values when present.
+message InsightServiceUpdateRequest {
+  // Local insight UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // Replacement title.
+  string title = 2 [(buf.validate.field).string.max_len = 255];
+  // Replacement problem or situation.
+  string problem = 3 [(buf.validate.field).string.max_len = 4000];
+  // Replacement answer.
+  string answer = 4 [(buf.validate.field).string.max_len = 1000];
+  // Replacement concrete example.
+  InsightExample example = 5;
+  // Replacement concrete action.
+  string action = 6 [(buf.validate.field).string.max_len = 4000];
+  // Replacement detail.
+  string detail = 7 [(buf.validate.field).string.max_len = 12000];
+  // Replacement kind/category.
+  string kind = 8 [(buf.validate.field).string.max_len = 100];
+  // Replacement tag set.
+  repeated string tags = 9;
+  // Replacement structured context.
+  map<string, string> context = 10;
+  // Replacement link set.
+  repeated InsightLink links = 11;
+}
+
+// InsightServiceUpdateResponse returns the updated insight.
+message InsightServiceUpdateResponse {
+  Insight insight = 1;
+}
+
+// InsightServiceRecordOutcomeRequest records whether an insight worked in a
+// concrete context after the suggested action was applied.
+message InsightServiceRecordOutcomeRequest {
+  // Local UUID or federated consensus URI for the insight being evaluated.
+  string insight_ref = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+  // Utility outcome. Expected values include solved, helped, did_not_work,
+  // stale, incorrect, and not_applicable. did_not_work means the insight looked
+  // applicable and was tried, but the suggested action failed.
+  string outcome = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  // Optional confidence from 0.0 to 1.0.
+  double confidence = 3;
+  // Short explanation of the observed result.
+  string rationale = 4 [(buf.validate.field).string.max_len = 2000];
+  // Optional client-supplied key for deduplicating retries.
+  string idempotency_key = 5 [(buf.validate.field).string.max_len = 255];
+}
+
+// InsightServiceRecordOutcomeResponse returns the created outcome ID.
+message InsightServiceRecordOutcomeResponse {
+  string outcome_id = 1;
+}

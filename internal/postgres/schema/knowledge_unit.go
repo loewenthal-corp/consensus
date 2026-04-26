@@ -26,9 +26,14 @@ func (KnowledgeUnit) Fields() []ent.Field {
 		field.String("title").
 			NotEmpty().
 			MaxLen(255),
+		field.Text("problem").
+			Optional(),
 		field.String("summary").
 			NotEmpty().
 			MaxLen(1000),
+		field.JSON("example", map[string]string{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.Text("detail").
 			Optional(),
 		field.Text("action").

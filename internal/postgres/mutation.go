@@ -3111,7 +3111,9 @@ type KnowledgeUnitMutation struct {
 	id                  *uuid.UUID
 	tenant_key          *string
 	title               *string
+	problem             *string
 	summary             *string
+	example             *map[string]string
 	detail              *string
 	action              *string
 	kind                *string
@@ -3310,6 +3312,55 @@ func (m *KnowledgeUnitMutation) ResetTitle() {
 	m.title = nil
 }
 
+// SetProblem sets the "problem" field.
+func (m *KnowledgeUnitMutation) SetProblem(s string) {
+	m.problem = &s
+}
+
+// Problem returns the value of the "problem" field in the mutation.
+func (m *KnowledgeUnitMutation) Problem() (r string, exists bool) {
+	v := m.problem
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProblem returns the old "problem" field's value of the KnowledgeUnit entity.
+// If the KnowledgeUnit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KnowledgeUnitMutation) OldProblem(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProblem is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProblem requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProblem: %w", err)
+	}
+	return oldValue.Problem, nil
+}
+
+// ClearProblem clears the value of the "problem" field.
+func (m *KnowledgeUnitMutation) ClearProblem() {
+	m.problem = nil
+	m.clearedFields[knowledgeunit.FieldProblem] = struct{}{}
+}
+
+// ProblemCleared returns if the "problem" field was cleared in this mutation.
+func (m *KnowledgeUnitMutation) ProblemCleared() bool {
+	_, ok := m.clearedFields[knowledgeunit.FieldProblem]
+	return ok
+}
+
+// ResetProblem resets all changes to the "problem" field.
+func (m *KnowledgeUnitMutation) ResetProblem() {
+	m.problem = nil
+	delete(m.clearedFields, knowledgeunit.FieldProblem)
+}
+
 // SetSummary sets the "summary" field.
 func (m *KnowledgeUnitMutation) SetSummary(s string) {
 	m.summary = &s
@@ -3344,6 +3395,55 @@ func (m *KnowledgeUnitMutation) OldSummary(ctx context.Context) (v string, err e
 // ResetSummary resets all changes to the "summary" field.
 func (m *KnowledgeUnitMutation) ResetSummary() {
 	m.summary = nil
+}
+
+// SetExample sets the "example" field.
+func (m *KnowledgeUnitMutation) SetExample(value map[string]string) {
+	m.example = &value
+}
+
+// Example returns the value of the "example" field in the mutation.
+func (m *KnowledgeUnitMutation) Example() (r map[string]string, exists bool) {
+	v := m.example
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExample returns the old "example" field's value of the KnowledgeUnit entity.
+// If the KnowledgeUnit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KnowledgeUnitMutation) OldExample(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExample is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExample requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExample: %w", err)
+	}
+	return oldValue.Example, nil
+}
+
+// ClearExample clears the value of the "example" field.
+func (m *KnowledgeUnitMutation) ClearExample() {
+	m.example = nil
+	m.clearedFields[knowledgeunit.FieldExample] = struct{}{}
+}
+
+// ExampleCleared returns if the "example" field was cleared in this mutation.
+func (m *KnowledgeUnitMutation) ExampleCleared() bool {
+	_, ok := m.clearedFields[knowledgeunit.FieldExample]
+	return ok
+}
+
+// ResetExample resets all changes to the "example" field.
+func (m *KnowledgeUnitMutation) ResetExample() {
+	m.example = nil
+	delete(m.clearedFields, knowledgeunit.FieldExample)
 }
 
 // SetDetail sets the "detail" field.
@@ -4033,15 +4133,21 @@ func (m *KnowledgeUnitMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KnowledgeUnitMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 19)
 	if m.tenant_key != nil {
 		fields = append(fields, knowledgeunit.FieldTenantKey)
 	}
 	if m.title != nil {
 		fields = append(fields, knowledgeunit.FieldTitle)
 	}
+	if m.problem != nil {
+		fields = append(fields, knowledgeunit.FieldProblem)
+	}
 	if m.summary != nil {
 		fields = append(fields, knowledgeunit.FieldSummary)
+	}
+	if m.example != nil {
+		fields = append(fields, knowledgeunit.FieldExample)
 	}
 	if m.detail != nil {
 		fields = append(fields, knowledgeunit.FieldDetail)
@@ -4097,8 +4203,12 @@ func (m *KnowledgeUnitMutation) Field(name string) (ent.Value, bool) {
 		return m.TenantKey()
 	case knowledgeunit.FieldTitle:
 		return m.Title()
+	case knowledgeunit.FieldProblem:
+		return m.Problem()
 	case knowledgeunit.FieldSummary:
 		return m.Summary()
+	case knowledgeunit.FieldExample:
+		return m.Example()
 	case knowledgeunit.FieldDetail:
 		return m.Detail()
 	case knowledgeunit.FieldAction:
@@ -4140,8 +4250,12 @@ func (m *KnowledgeUnitMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldTenantKey(ctx)
 	case knowledgeunit.FieldTitle:
 		return m.OldTitle(ctx)
+	case knowledgeunit.FieldProblem:
+		return m.OldProblem(ctx)
 	case knowledgeunit.FieldSummary:
 		return m.OldSummary(ctx)
+	case knowledgeunit.FieldExample:
+		return m.OldExample(ctx)
 	case knowledgeunit.FieldDetail:
 		return m.OldDetail(ctx)
 	case knowledgeunit.FieldAction:
@@ -4193,12 +4307,26 @@ func (m *KnowledgeUnitMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTitle(v)
 		return nil
+	case knowledgeunit.FieldProblem:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProblem(v)
+		return nil
 	case knowledgeunit.FieldSummary:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSummary(v)
+		return nil
+	case knowledgeunit.FieldExample:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExample(v)
 		return nil
 	case knowledgeunit.FieldDetail:
 		v, ok := value.(string)
@@ -4328,6 +4456,12 @@ func (m *KnowledgeUnitMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *KnowledgeUnitMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(knowledgeunit.FieldProblem) {
+		fields = append(fields, knowledgeunit.FieldProblem)
+	}
+	if m.FieldCleared(knowledgeunit.FieldExample) {
+		fields = append(fields, knowledgeunit.FieldExample)
+	}
 	if m.FieldCleared(knowledgeunit.FieldDetail) {
 		fields = append(fields, knowledgeunit.FieldDetail)
 	}
@@ -4369,6 +4503,12 @@ func (m *KnowledgeUnitMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *KnowledgeUnitMutation) ClearField(name string) error {
 	switch name {
+	case knowledgeunit.FieldProblem:
+		m.ClearProblem()
+		return nil
+	case knowledgeunit.FieldExample:
+		m.ClearExample()
+		return nil
 	case knowledgeunit.FieldDetail:
 		m.ClearDetail()
 		return nil
@@ -4410,8 +4550,14 @@ func (m *KnowledgeUnitMutation) ResetField(name string) error {
 	case knowledgeunit.FieldTitle:
 		m.ResetTitle()
 		return nil
+	case knowledgeunit.FieldProblem:
+		m.ResetProblem()
+		return nil
 	case knowledgeunit.FieldSummary:
 		m.ResetSummary()
+		return nil
+	case knowledgeunit.FieldExample:
+		m.ResetExample()
 		return nil
 	case knowledgeunit.FieldDetail:
 		m.ResetDetail()

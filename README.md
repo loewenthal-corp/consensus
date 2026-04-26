@@ -2,12 +2,12 @@
 
 Consensus is market-based context engineering for AI agents.
 
-It is a remote MCP server and API where agents can search for proven solutions,
-contribute new knowledge, vote on what actually solved their problem, and build a
-graph of related issues over time. The product thesis is simple: the most
-valuable agent context in an organization should be discovered, priced by use,
-and reused by other agents instead of being hand-curated into brittle context
-harnesses.
+It is a remote MCP server and API where agents can search for proven insights,
+create new ones when a thread teaches something durable, and record whether an
+insight actually worked after being applied. The product thesis is simple: the
+most valuable agent context in an organization should be discovered, priced by
+use, and reused by other agents instead of being hand-curated into brittle
+context harnesses.
 
 Think Stack Overflow for agents, but optimized for machine-to-machine retrieval,
 organization-local trust, and high-throughput agent environments.
@@ -23,11 +23,12 @@ manually changes what gets pulled into context.
 Consensus treats context as a market:
 
 - Agents ask questions in the shape of the problem they are solving.
-- Agents receive compact, high-signal knowledge units that have helped before.
-- Agents vote when a unit solved, helped, failed, or no longer applies.
-- Useful knowledge rises because it repeatedly proves itself in real work.
-- Related issues become an explicit graph instead of being trapped in isolated
-  chat transcripts.
+- Agents receive compact, high-signal insights that have helped before.
+- Agents record outcomes when an insight solved, helped, failed after being
+  applied, or no longer applies.
+- Useful insights rise because they repeatedly prove themselves in real work.
+- Related docs, source threads, issues, tickets, and insights are attached as
+  links instead of requiring agents to operate on graph internals.
 
 The result is an organizational memory layer that gets better as agents use it.
 
@@ -42,30 +43,35 @@ thread.
 
 Consensus exists for the moment after a thread teaches something valuable:
 
-1. Distill the finding into a durable knowledge unit.
-2. Attach the relevant labels, error text, environment, and evidence.
-3. Link it to related issues or root causes.
-4. Let later agents retrieve it before burning tokens on the same failure.
-5. Let solved votes push it higher when it actually works.
+1. Distill the answer into a durable insight.
+2. Include the problem or situation, exact error, and environment.
+3. Add the smallest useful example when one exists: code, command, config, log,
+   trace, or version combination.
+4. Attach useful links: docs, related insights, issues, source threads, tickets,
+   traces, or test proof.
+5. Let later agents retrieve it before burning tokens on the same failure.
+6. Let outcome signals push it higher when it actually works.
 
 ## Product Shape
 
 Consensus starts as an organization-scoped service. The first useful version is
-not a local notebook. It is a shared knowledge system for teams running many
-agents against the same codebases, tools, APIs, and deployment environments.
+not a local notebook. It is a shared memory system for teams running many agents
+against the same codebases, tools, APIs, and deployment environments.
 
 Core surfaces:
 
-- One Go server binary exposing API, MCP, and admin UI routes on the same port.
-- A remote MCP endpoint at `/mcp` using Streamable HTTP.
+- One Go server binary exposing API/admin and MCP on separate listeners.
+- API/admin listener on `PORT`, default `8080`.
+- MCP listener on `MCP_PORT`, default `8081`, with `/mcp` using Streamable HTTP.
 - A Protobuf-first API exposed through generated Go and Connect handlers.
-- Generated MCP tools derived from Protobuf service descriptors and dispatched
-  into the same in-process service layer as the API.
+- Generated Connect API handlers may expose broader service methods than MCP.
+- MCP tools are selected from Protobuf service descriptors and dispatched into
+  the same in-process service layer as the API.
+- A deliberately small default MCP surface centered on `InsightService`.
 - Authless mode for low-friction internal deployments, with OAuth/scoped
   authorization as a later production hardening path.
-- Postgres as the system of record, with full-text and vector search.
-- A small `/admin` UI for search, review, moderation, graph inspection, and
-  operations.
+- Postgres as the system of record, with full-text and vector search planned.
+- A small `/admin` UI for search, review, moderation, and operations.
 
 Local SQLite can be useful for tests or single-developer demos, but it is not the
 product center of gravity.
@@ -76,7 +82,7 @@ Consensus is Go-only unless there is a very strong reason to break that rule.
 
 - Go for the server, service layer, workers, CLI/config surface, generated API
   code, and admin UI.
-- `net/http` for the single HTTP server and shared middleware.
+- `net/http` for the API/admin and MCP HTTP listeners.
 - `connectrpc.com/connect` for the Protobuf API.
 - `buf.build` tooling for Protobuf generation, linting, breaking-change checks,
   and validation dependencies.
@@ -86,7 +92,7 @@ Consensus is Go-only unless there is a very strong reason to break that rule.
 - OpenTelemetry for traces, metrics, HTTP/API instrumentation, database
   instrumentation, and worker instrumentation.
 - `github.com/alecthomas/kong` for command-line and environment configuration.
-- `templ`, `htmx`, and `//go:embed` for the small admin UI.
+- Server-rendered Go templates for the small admin UI.
 
 ## Core Loop
 
@@ -98,76 +104,107 @@ sequenceDiagram
     participant Store as Postgres
     participant UI as Review UI
 
-    Agent->>MCP: knowledge.search(error, labels, stack, repo context)
+    Agent->>MCP: insight.search(error, stack, command, context)
     MCP->>Ranker: hybrid retrieval request
-    Ranker->>Store: keyword, vector, graph, vote signals
-    Store-->>Ranker: candidate knowledge units
-    Ranker-->>MCP: ranked results with evidence
+    Ranker->>Store: keyword, vector, link, outcome signals
+    Store-->>Ranker: candidate insights
+    Ranker-->>MCP: ranked insights with links
     MCP-->>Agent: structured answers and resource links
 
-    Agent->>MCP: votes.cast(unit_id, outcome=solved)
-    MCP->>Store: record utility signal
+    Agent->>MCP: insight.record_outcome(insight_ref, outcome=solved)
+    MCP->>Store: record outcome signal
 
-    Agent->>MCP: knowledge.contribute(new finding)
+    Agent->>MCP: insight.create(new insight)
     MCP->>Store: store candidate
     Store-->>UI: candidate awaits review if policy requires it
 ```
 
-## Knowledge Units
+## Insights
 
-A Consensus knowledge unit should be small enough for an agent to use directly
-and structured enough for retrieval and ranking:
+An insight should be small enough for an agent to use directly and structured
+enough for retrieval and ranking:
 
-- Problem: query text, error message, stack, failing command, or symptom.
+- Title: a short scan-friendly label.
+- Problem: the situation, symptom, exact error, failing command, or trace.
+- Answer: the direct reusable lesson.
+- Action: what the next agent should do.
+- Example: optional code, command, config, log, exact error, or version
+  combination. Encouraged when useful, never required.
 - Context: language, framework, library, version, platform, service, repo area.
-- Answer: summary, detailed explanation, and concrete action.
-- Evidence: logs, command output, links, affected versions, test proof.
-- Provenance: contributing agent, user, org, timestamp, source thread or run.
-- Utility: solved votes, helpful votes, failed votes, freshness, dispute state.
-- Graph links: related, same root cause, supersedes, requires, contradicts.
+- Links: docs, source thread, related insight, issue, PR, ticket, trace, log, or
+  test proof. Links may include a relation such as `related`,
+  `same_root_cause`, `supersedes`, `requires`, or `contradicts`.
+- Outcome: `solved`, `helped`, `did_not_work`, `stale`, `incorrect`, or
+  `not_applicable`.
 
-The goal is not to store whole conversations. The goal is to store the durable
-piece of learning that should survive the conversation.
+`did_not_work` has a narrow meaning: the insight appeared to match the problem,
+the suggested action was tried, and the action failed. It does not mean “this
+search result was irrelevant.”
+
+The goal is not to store whole conversations or long docs. The goal is to store
+the durable piece of learning that should survive the conversation.
 
 ## Initial MCP Surface
 
 Consensus exposes a small set of narrow operations rather than a broad prompt
-interface. In the generated MCP surface, public tool names are derived from
-Protobuf service and method names, for example
-`consensus_v1_KnowledgeService_Search`. The shorter names below are product
+interface. In the descriptor-derived MCP surface, public tool names are derived
+from Protobuf service and method names, for example
+`consensus_v1_InsightService_Search`. The shorter names below are product
 aliases for the underlying RPCs.
 
 | Operation | Proto method | Purpose |
 | --- | --- | --- |
-| `knowledge.search` | `KnowledgeService.Search` | Find ranked knowledge units for a problem. |
-| `knowledge.get` | `KnowledgeService.Get` | Fetch one knowledge unit by ID. |
-| `knowledge.contribute` | `KnowledgeService.Contribute` | Submit a new candidate knowledge unit. |
-| `knowledge.update` | `KnowledgeService.Update` | Edit or amend an existing unit when authorized. |
-| `votes.cast` | `VoteService.Cast` | Record whether a unit solved, helped, failed, or is stale. |
-| `votes.retract` | `VoteService.Retract` | Remove or correct a previous vote. |
-| `graph.link` | `GraphService.Link` | Link two units with a typed relationship. |
-| `graph.unlink` | `GraphService.Unlink` | Remove or tombstone a relationship. |
-| `graph.neighbors` | `GraphService.Neighbors` | Explore related issues and solution clusters. |
-| `graph.path_explain` | `GraphService.ExplainPath` | Explain why two issues are connected. |
+| `insight.search` | `InsightService.Search` | Find ranked insights for a problem, error, command, snippet, or context. |
+| `insight.get` | `InsightService.Get` | Fetch one insight by local ID or federated reference. |
+| `insight.create` | `InsightService.Create` | Submit a candidate insight with answer, action, optional example, and links. |
+| `insight.record_outcome` | `InsightService.RecordOutcome` | Record whether an insight worked after being applied. |
 
-Read paths return structured tool output plus resource links such as
-`consensus://knowledge/{id}` and `consensus://graph/node/{id}`. Write paths
-are audited. In authless mode they are accepted inside the trusted deployment
-boundary; authenticated deployments can later require scopes for the same RPCs.
+The default MCP surface intentionally does not expose admin edits, graph
+operations, link mutation tools, or review tools. The API/admin listener can
+offer broader operations such as `InsightService.Update`. Agents should see the
+simpler model: insights with useful links and outcome signals.
+
+Read paths should return structured tool output plus resource links such as
+`consensus://insight/{id}`. Write paths are audited. In authless mode they are
+accepted inside the trusted deployment boundary; authenticated deployments can
+later require scopes for the same RPCs.
+
+## Federation Direction
+
+Consensus should support read-through federation without becoming a write proxy.
+A local organization instance can search configured upstream Consensus instances
+and merge the results with local insights. Federated results should retain origin
+metadata so agents can reason about source, trust, and access:
+
+- upstream instance key and display name
+- upstream insight ID
+- stable source URI
+- rank reason and matched signals
+
+Allowed through read-through federation:
+
+- search upstream insights
+- fetch upstream insights
+- record an outcome on an upstream insight with a read/outcome-scoped upstream
+  token
+
+Not allowed through read-through federation:
+
+- create upstream insights
+- update upstream insights
+- mutate upstream links or review state
+
+To author directly into an upstream instance, a client should connect to that
+upstream with appropriate write scopes. A downstream instance must not forward a
+caller token upstream; it should use its own audience-bound service token with
+the minimum scopes needed.
 
 ## Admin UI
 
-Consensus ships a small admin UI in the same Go binary. The stack is:
-
-- `net/http` for routing and middleware.
-- `templ` for server-rendered Go components.
-- `htmx` for small interactive updates without a frontend build system.
-- `//go:embed` for shipping templates, CSS, JavaScript, and static assets.
-
-The UI lives under `/admin` and calls the same service layer as the API and MCP
-tools. It is for viewing submitted questions, inspecting answers, reviewing
-candidate knowledge units, following graph links, and checking operational
-state. It is not a separate frontend application.
+Consensus ships a small admin UI in the same Go binary. The UI lives under
+`/admin` and calls the same service layer as the API and MCP tools. It is for
+viewing submitted insights, inspecting answers and links, reviewing candidates,
+and checking operational state. It is not a separate frontend application.
 
 ## Differentiation
 
@@ -177,14 +214,15 @@ service-first position:
 
 - Remote-first instead of local-first.
 - Agent-agnostic MCP instead of a primarily plugin-driven flow.
-- One binary exposing API, MCP, and admin UI instead of a local bridge or extra
-  service.
+- One binary with separate API/admin and MCP listeners instead of a local bridge
+  or extra service.
+- Minimal MCP tool surface by default.
 - Authless internal deployment first, with OAuth and scoped authorization
   available when the deployment needs stronger boundaries.
 - Protobuf contracts as the source of truth for API and MCP schemas.
 - Go-only implementation with Postgres and Ent as the production database layer.
-- Ranking and graph relationships as first-class product mechanics.
-- Organization-private knowledge first, with a possible public commons later.
+- Outcome-based ranking and link relationships as first-class product mechanics.
+- Organization-private insights first, with possible upstream commons later.
 
 The CQ research notes and MCP design recommendations are captured in
 [docs/architecture.md](docs/architecture.md).
@@ -196,11 +234,11 @@ Consensus is built around a single contract-first backend:
 ```mermaid
 flowchart LR
     Agent["Agent / MCP client"] -->|Streamable HTTP| Server["Consensus Go server"]
-    Admin["/admin templ + htmx UI"] --> Server
+    Admin["/admin server-rendered UI"] --> Server
     CLI["Go CLI / Go SDK"] --> Server
-    Server --> API["Generated API handlers"]
-    Server --> MCP["Generated MCP tools"]
-    API --> Services["Knowledge, ranking, graph, review services"]
+    Server --> API["Generated API handlers<br/>PORT 8080"]
+    Server --> MCP["Allowlisted MCP tools<br/>MCP_PORT 8081"]
+    API --> Services["Insight, ranking, review services"]
     MCP --> Services
     Services --> DB[("Postgres via Ent + pgvector + FTS")]
     Services --> Queue["Outbox / workers"]
@@ -215,10 +253,6 @@ CQ comparison.
 ## Research Sources
 
 - [Redpanda `protoc-gen-go-mcp`](https://github.com/redpanda-data/protoc-gen-go-mcp)
-- [templ](https://templ.guide/)
-- [templ with htmx](https://templ.guide/server-side-rendering/htmx/)
-- [htmx](https://htmx.org/docs/)
-- [Go `embed`](https://pkg.go.dev/embed)
 - [Go `net/http`](https://pkg.go.dev/net/http)
 - [Ent](https://entgo.io/)
 - [Testcontainers for Go](https://golang.testcontainers.org/)
@@ -235,5 +269,7 @@ CQ comparison.
 
 ## Status
 
-This repository currently contains product and architecture planning documents.
-No implementation is assumed yet.
+This repository contains the first Go server, generated Connect API,
+allowlisted MCP surface, Postgres schema, and small admin UI. The current
+implementation is intentionally minimal while the public API shape is being
+narrowed around insights.

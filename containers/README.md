@@ -9,21 +9,21 @@ task containers::up
 The local endpoints are:
 
 - Admin UI: <http://localhost:8080/admin/>
-- MCP endpoint: <http://localhost:8080/mcp>
-- Connect API: <http://localhost:8080/consensus.v1.KnowledgeService/>
+- Connect API: <http://localhost:8080/consensus.v1.InsightService/>
 - Health check: <http://localhost:8080/healthz>
+- MCP endpoint: <http://localhost:8081/mcp>
 
 Register the local MCP server with Codex:
 
 ```sh
-codex mcp add consensus-local --url http://localhost:8080/mcp
+codex mcp add consensus-local --url http://localhost:8081/mcp
 ```
 
 That writes this entry to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.consensus-local]
-url = "http://localhost:8080/mcp"
+url = "http://localhost:8081/mcp"
 ```
 
 Verify the registration:
