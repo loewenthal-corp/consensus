@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"entgo.io/ent/dialect"
@@ -44,7 +45,7 @@ func main() {
 }
 
 func run(ctx context.Context, cfg CLI) error {
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	sqlDB, err := sql.Open("pgx", cfg.DatabaseURL)

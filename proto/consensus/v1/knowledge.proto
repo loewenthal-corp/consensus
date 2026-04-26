@@ -5,208 +5,333 @@ package consensus.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
-// KnowledgeService stores and retrieves durable agent learnings.
+// KnowledgeService stores and retrieves durable agent learnings: compact,
+// evidence-backed findings that should survive a single agent thread and be
+// reused by future agents working on similar problems.
 service KnowledgeService {
-  // Search returns ranked knowledge units for a problem statement, error, or task.
+  // Search returns ranked knowledge units for a problem statement, error, task,
+  // failing command, stack trace, or repo/tool context. Use this before spending
+  // tokens rediscovering an answer that another agent may have already proven.
   rpc Search(KnowledgeServiceSearchRequest) returns (KnowledgeServiceSearchResponse);
 
-  // Get returns one knowledge unit by ID.
+  // Get returns one knowledge unit by ID, including its answer, action,
+  // labels, context, evidence references, lifecycle state, and review state.
   rpc Get(KnowledgeServiceGetRequest) returns (KnowledgeServiceGetResponse);
 
-  // Contribute submits a new candidate knowledge unit.
+  // Contribute submits a new candidate knowledge unit after a thread discovers
+  // a durable lesson. Store the distilled problem, context, answer, concrete
+  // action, and evidence instead of pasting a whole conversation.
   rpc Contribute(KnowledgeServiceContributeRequest) returns (KnowledgeServiceContributeResponse);
 
-  // Update amends an existing knowledge unit.
+  // Update amends an existing knowledge unit when the stored finding needs a
+  // clearer title, fresher evidence, corrected context, or a revised action.
   rpc Update(KnowledgeServiceUpdateRequest) returns (KnowledgeServiceUpdateResponse);
 }
 
-// VoteService records whether a knowledge unit worked in a concrete context.
+// VoteService records whether a knowledge unit worked in a concrete context so
+// useful context rises and stale or failed context loses trust.
 service VoteService {
-  // Cast records a utility signal for a knowledge unit.
+  // Cast records a utility signal for a knowledge unit. Use outcomes such as
+  // solved, helped, failed, or stale to teach the ranking loop what actually
+  // worked in the current environment.
   rpc Cast(VoteServiceCastRequest) returns (VoteServiceCastResponse);
 
-  // Retract removes or corrects a previous utility signal.
+  // Retract removes or corrects a previous utility signal when the vote was
+  // accidental, duplicated, or no longer represents the observed result.
   rpc Retract(VoteServiceRetractRequest) returns (VoteServiceRetractResponse);
 }
 
-// GraphService manages typed relationships between knowledge units and problems.
+// GraphService manages typed relationships between knowledge units and problems
+// so related symptoms, shared root causes, superseded guidance, requirements,
+// and contradictions are explicit instead of trapped in chat history.
 service GraphService {
-  // Link creates a typed relationship between two nodes.
+  // Link creates a typed relationship between two knowledge or problem nodes,
+  // such as related, same_root_cause, supersedes, requires, or contradicts.
   rpc Link(GraphServiceLinkRequest) returns (GraphServiceLinkResponse);
 
-  // Unlink tombstones a relationship between two nodes.
+  // Unlink tombstones a relationship when a graph edge was wrong, duplicated,
+  // or no longer useful for retrieval.
   rpc Unlink(GraphServiceUnlinkRequest) returns (GraphServiceUnlinkResponse);
 
-  // Neighbors returns nearby units and relationships.
+  // Neighbors returns nearby units and relationships so an agent can inspect
+  // adjacent issues, solution clusters, and root-cause neighborhoods.
   rpc Neighbors(GraphServiceNeighborsRequest) returns (GraphServiceNeighborsResponse);
 
-  // ExplainPath explains why two units or problems are connected.
+  // ExplainPath explains why two units or problems are connected, returning the
+  // graph edges that justify the relationship when a path is known.
   rpc ExplainPath(GraphServiceExplainPathRequest) returns (GraphServiceExplainPathResponse);
 }
 
+// KnowledgeUnit is the durable piece of learning Consensus stores. It should be
+// compact enough for an agent to read into context and structured enough for
+// retrieval, review, voting, and graph linking.
 message KnowledgeUnit {
+  // Stable UUID for this knowledge unit.
   string id = 1;
+  // Human-readable title for scanning search results and admin review queues.
   string title = 2;
+  // Short answer or lesson learned. Keep this high signal and directly usable.
   string summary = 3;
+  // Longer explanation with relevant constraints, failure mode, or reasoning.
   string detail = 4;
+  // Concrete next step an agent should take when this unit applies.
   string action = 5;
+  // Category such as finding, pitfall, runbook, workaround, root_cause, or policy.
   string kind = 6;
+  // Retrieval and routing labels such as language, framework, service, tool, repo,
+  // error family, or deployment environment.
   repeated string labels = 7;
+  // Structured context used for matching and filtering, for example language=go,
+  // framework=nextjs, repo_area=admin-ui, service=posthog, or platform=kubernetes.
   map<string, string> context = 8;
+  // Evidence that supports the finding, such as logs, command output, docs,
+  // source links, issue links, or test proof.
   repeated EvidenceRef evidence_refs = 9;
+  // Moderation/review state such as accepted, pending, disputed, or rejected.
   string review_state = 10;
+  // Lifecycle state such as active, archived, superseded, or deleted.
   string lifecycle_state = 11;
+  // Creation timestamp assigned by the server.
   google.protobuf.Timestamp created_at = 12;
+  // Last update timestamp assigned by the server.
   google.protobuf.Timestamp updated_at = 13;
+  // Last time a solved/helpful vote or review process confirmed this unit.
   google.protobuf.Timestamp last_confirmed_at = 14;
 }
 
+// EvidenceRef points to source material that lets later agents verify why a
+// knowledge unit should be trusted.
 message EvidenceRef {
+  // Evidence type such as log, command_output, docs, source, issue, trace, or test.
   string kind = 1;
+  // Short label for the evidence.
   string title = 2;
+  // Optional URI for a source document, issue, log view, trace, file, or resource.
   string uri = 3;
+  // Small relevant excerpt. Avoid storing whole conversations or large logs.
   string excerpt = 4;
 }
 
+// KnowledgeServiceSearchRequest asks Consensus for previously proven context
+// that may apply to the current problem.
 message KnowledgeServiceSearchRequest {
+  // Natural-language problem statement, error text, stack trace, failing command,
+  // or task description. This is required and should include the most specific
+  // symptom available.
   string query = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 4000
   }];
+  // Optional retrieval labels to narrow results to a stack, tool, service, repo,
+  // or environment.
   repeated string labels = 2;
+  // Optional structured context for matching and filtering, such as language,
+  // framework, version, platform, repo area, service, or deployment target.
   map<string, string> context = 3;
+  // Maximum number of results. The server chooses a practical default when zero.
   int32 limit = 4 [(buf.validate.field).int32 = {
     gte: 0
     lte: 50
   }];
 }
 
+// KnowledgeServiceSearchResponse returns ranked matches with ranking rationale.
 message KnowledgeServiceSearchResponse {
   repeated KnowledgeSearchResult results = 1;
 }
 
+// KnowledgeSearchResult wraps a candidate unit with scoring details so an agent
+// can decide whether and how strongly to use it.
 message KnowledgeSearchResult {
+  // Matched knowledge unit.
   KnowledgeUnit unit = 1;
+  // Relative ranking score assigned by the retrieval layer.
   double score = 2;
+  // Short explanation of why this unit ranked where it did.
   string rank_reason = 3;
+  // Signals that matched, such as text, label, context, vote, graph, or vector.
   repeated string matched_signals = 4;
 }
 
+// KnowledgeServiceGetRequest fetches one stored knowledge unit.
 message KnowledgeServiceGetRequest {
+  // Knowledge unit UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
 }
 
+// KnowledgeServiceGetResponse contains the requested knowledge unit.
 message KnowledgeServiceGetResponse {
   KnowledgeUnit unit = 1;
 }
 
+// KnowledgeServiceContributeRequest submits a durable finding after a thread
+// produces something later agents should reuse.
 message KnowledgeServiceContributeRequest {
+  // Human-readable title for the reusable finding.
   string title = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // Compact answer or lesson learned.
   string summary = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 1000
   }];
+  // Longer explanation of the symptom, context, constraints, or reasoning.
   string detail = 3 [(buf.validate.field).string.max_len = 12000];
+  // Concrete action future agents should take when this unit applies.
   string action = 4 [(buf.validate.field).string.max_len = 4000];
+  // Category such as finding, pitfall, runbook, workaround, root_cause, or policy.
   string kind = 5 [(buf.validate.field).string.max_len = 100];
+  // Retrieval and routing labels for the stack, tool, service, repo, or error family.
   repeated string labels = 6;
+  // Structured context for matching and filtering.
   map<string, string> context = 7;
+  // Evidence proving or explaining the finding.
   repeated EvidenceRef evidence_refs = 8;
+  // Optional client-supplied key for deduplicating retries.
   string idempotency_key = 9 [(buf.validate.field).string.max_len = 255];
 }
 
+// KnowledgeServiceContributeResponse returns the created unit and whether human
+// or policy review is still required before it should influence retrieval.
 message KnowledgeServiceContributeResponse {
   KnowledgeUnit unit = 1;
   bool pending_review = 2;
 }
 
+// KnowledgeServiceUpdateRequest amends an existing unit. Empty scalar fields are
+// treated as omitted by the first implementation; repeated and map fields replace
+// existing values when present.
 message KnowledgeServiceUpdateRequest {
+  // Knowledge unit UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // Replacement title.
   string title = 2 [(buf.validate.field).string.max_len = 255];
+  // Replacement summary.
   string summary = 3 [(buf.validate.field).string.max_len = 1000];
+  // Replacement detail.
   string detail = 4 [(buf.validate.field).string.max_len = 12000];
+  // Replacement concrete action.
   string action = 5 [(buf.validate.field).string.max_len = 4000];
+  // Replacement kind/category.
   string kind = 6 [(buf.validate.field).string.max_len = 100];
+  // Replacement label set.
   repeated string labels = 7;
+  // Replacement structured context.
   map<string, string> context = 8;
+  // Replacement evidence set.
   repeated EvidenceRef evidence_refs = 9;
 }
 
+// KnowledgeServiceUpdateResponse returns the updated unit.
 message KnowledgeServiceUpdateResponse {
   KnowledgeUnit unit = 1;
 }
 
+// VoteServiceCastRequest records whether a unit worked for the current agent.
 message VoteServiceCastRequest {
+  // Knowledge unit UUID being evaluated.
   string knowledge_unit_id = 1 [(buf.validate.field).string.uuid = true];
+  // Utility outcome. Expected values include solved, helped, failed, and stale.
   string outcome = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 100
   }];
+  // Optional confidence from 0.0 to 1.0.
   double confidence = 3;
+  // Short explanation of the observed result.
   string rationale = 4 [(buf.validate.field).string.max_len = 2000];
+  // Optional client-supplied key for deduplicating retries.
   string idempotency_key = 5 [(buf.validate.field).string.max_len = 255];
 }
 
+// VoteServiceCastResponse returns the created vote ID.
 message VoteServiceCastResponse {
   string vote_id = 1;
 }
 
+// VoteServiceRetractRequest removes or corrects a previous utility vote.
 message VoteServiceRetractRequest {
+  // Vote UUID.
   string vote_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message VoteServiceRetractResponse {}
 
+// GraphServiceLinkRequest creates a typed relationship between two nodes.
 message GraphServiceLinkRequest {
+  // Source knowledge unit or problem node UUID.
   string from_id = 1 [(buf.validate.field).string.uuid = true];
+  // Target knowledge unit or problem node UUID.
   string to_id = 2 [(buf.validate.field).string.uuid = true];
+  // Relationship type such as related, same_root_cause, supersedes, requires,
+  // or contradicts.
   string relationship = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 100
   }];
+  // Short explanation for why this edge should exist.
   string rationale = 4 [(buf.validate.field).string.max_len = 2000];
 }
 
+// GraphServiceLinkResponse returns the created edge ID.
 message GraphServiceLinkResponse {
   string edge_id = 1;
 }
 
+// GraphServiceUnlinkRequest removes a graph edge.
 message GraphServiceUnlinkRequest {
+  // Graph edge UUID.
   string edge_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GraphServiceUnlinkResponse {}
 
+// GraphServiceNeighborsRequest explores a node's nearby knowledge graph.
 message GraphServiceNeighborsRequest {
+  // Knowledge unit or problem node UUID.
   string node_id = 1 [(buf.validate.field).string.uuid = true];
+  // Maximum number of nearby edges/units to return. The server chooses a
+  // practical default when zero.
   int32 limit = 2 [(buf.validate.field).int32 = {
     gte: 0
     lte: 50
   }];
 }
 
+// GraphServiceNeighborsResponse returns nearby units and the edges connecting them.
 message GraphServiceNeighborsResponse {
   repeated KnowledgeUnit units = 1;
   repeated GraphEdge edges = 2;
 }
 
+// GraphEdge is a typed relationship between two knowledge or problem nodes.
 message GraphEdge {
+  // Stable edge UUID.
   string id = 1;
+  // Source node UUID.
   string from_id = 2;
+  // Target node UUID.
   string to_id = 3;
+  // Relationship type.
   string relationship = 4;
+  // Explanation for the relationship.
   string rationale = 5;
 }
 
+// GraphServiceExplainPathRequest asks why two nodes are connected.
 message GraphServiceExplainPathRequest {
+  // Starting knowledge unit or problem node UUID.
   string from_id = 1 [(buf.validate.field).string.uuid = true];
+  // Ending knowledge unit or problem node UUID.
   string to_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
+// GraphServiceExplainPathResponse explains the known graph relationship.
 message GraphServiceExplainPathResponse {
+  // Human-readable explanation of the path or lack of a known path.
   string explanation = 1;
+  // Edges that justify the explanation.
   repeated GraphEdge edges = 2;
 }

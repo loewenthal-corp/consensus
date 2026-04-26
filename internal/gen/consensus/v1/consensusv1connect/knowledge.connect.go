@@ -63,13 +63,19 @@ const (
 
 // KnowledgeServiceClient is a client for the consensus.v1.KnowledgeService service.
 type KnowledgeServiceClient interface {
-	// Search returns ranked knowledge units for a problem statement, error, or task.
+	// Search returns ranked knowledge units for a problem statement, error, task,
+	// failing command, stack trace, or repo/tool context. Use this before spending
+	// tokens rediscovering an answer that another agent may have already proven.
 	Search(context.Context, *v1.KnowledgeServiceSearchRequest) (*v1.KnowledgeServiceSearchResponse, error)
-	// Get returns one knowledge unit by ID.
+	// Get returns one knowledge unit by ID, including its answer, action,
+	// labels, context, evidence references, lifecycle state, and review state.
 	Get(context.Context, *v1.KnowledgeServiceGetRequest) (*v1.KnowledgeServiceGetResponse, error)
-	// Contribute submits a new candidate knowledge unit.
+	// Contribute submits a new candidate knowledge unit after a thread discovers
+	// a durable lesson. Store the distilled problem, context, answer, concrete
+	// action, and evidence instead of pasting a whole conversation.
 	Contribute(context.Context, *v1.KnowledgeServiceContributeRequest) (*v1.KnowledgeServiceContributeResponse, error)
-	// Update amends an existing knowledge unit.
+	// Update amends an existing knowledge unit when the stored finding needs a
+	// clearer title, fresher evidence, corrected context, or a revised action.
 	Update(context.Context, *v1.KnowledgeServiceUpdateRequest) (*v1.KnowledgeServiceUpdateResponse, error)
 }
 
@@ -157,13 +163,19 @@ func (c *knowledgeServiceClient) Update(ctx context.Context, req *v1.KnowledgeSe
 
 // KnowledgeServiceHandler is an implementation of the consensus.v1.KnowledgeService service.
 type KnowledgeServiceHandler interface {
-	// Search returns ranked knowledge units for a problem statement, error, or task.
+	// Search returns ranked knowledge units for a problem statement, error, task,
+	// failing command, stack trace, or repo/tool context. Use this before spending
+	// tokens rediscovering an answer that another agent may have already proven.
 	Search(context.Context, *v1.KnowledgeServiceSearchRequest) (*v1.KnowledgeServiceSearchResponse, error)
-	// Get returns one knowledge unit by ID.
+	// Get returns one knowledge unit by ID, including its answer, action,
+	// labels, context, evidence references, lifecycle state, and review state.
 	Get(context.Context, *v1.KnowledgeServiceGetRequest) (*v1.KnowledgeServiceGetResponse, error)
-	// Contribute submits a new candidate knowledge unit.
+	// Contribute submits a new candidate knowledge unit after a thread discovers
+	// a durable lesson. Store the distilled problem, context, answer, concrete
+	// action, and evidence instead of pasting a whole conversation.
 	Contribute(context.Context, *v1.KnowledgeServiceContributeRequest) (*v1.KnowledgeServiceContributeResponse, error)
-	// Update amends an existing knowledge unit.
+	// Update amends an existing knowledge unit when the stored finding needs a
+	// clearer title, fresher evidence, corrected context, or a revised action.
 	Update(context.Context, *v1.KnowledgeServiceUpdateRequest) (*v1.KnowledgeServiceUpdateResponse, error)
 }
 
@@ -235,9 +247,12 @@ func (UnimplementedKnowledgeServiceHandler) Update(context.Context, *v1.Knowledg
 
 // VoteServiceClient is a client for the consensus.v1.VoteService service.
 type VoteServiceClient interface {
-	// Cast records a utility signal for a knowledge unit.
+	// Cast records a utility signal for a knowledge unit. Use outcomes such as
+	// solved, helped, failed, or stale to teach the ranking loop what actually
+	// worked in the current environment.
 	Cast(context.Context, *v1.VoteServiceCastRequest) (*v1.VoteServiceCastResponse, error)
-	// Retract removes or corrects a previous utility signal.
+	// Retract removes or corrects a previous utility signal when the vote was
+	// accidental, duplicated, or no longer represents the observed result.
 	Retract(context.Context, *v1.VoteServiceRetractRequest) (*v1.VoteServiceRetractResponse, error)
 }
 
@@ -293,9 +308,12 @@ func (c *voteServiceClient) Retract(ctx context.Context, req *v1.VoteServiceRetr
 
 // VoteServiceHandler is an implementation of the consensus.v1.VoteService service.
 type VoteServiceHandler interface {
-	// Cast records a utility signal for a knowledge unit.
+	// Cast records a utility signal for a knowledge unit. Use outcomes such as
+	// solved, helped, failed, or stale to teach the ranking loop what actually
+	// worked in the current environment.
 	Cast(context.Context, *v1.VoteServiceCastRequest) (*v1.VoteServiceCastResponse, error)
-	// Retract removes or corrects a previous utility signal.
+	// Retract removes or corrects a previous utility signal when the vote was
+	// accidental, duplicated, or no longer represents the observed result.
 	Retract(context.Context, *v1.VoteServiceRetractRequest) (*v1.VoteServiceRetractResponse, error)
 }
 
@@ -343,13 +361,17 @@ func (UnimplementedVoteServiceHandler) Retract(context.Context, *v1.VoteServiceR
 
 // GraphServiceClient is a client for the consensus.v1.GraphService service.
 type GraphServiceClient interface {
-	// Link creates a typed relationship between two nodes.
+	// Link creates a typed relationship between two knowledge or problem nodes,
+	// such as related, same_root_cause, supersedes, requires, or contradicts.
 	Link(context.Context, *v1.GraphServiceLinkRequest) (*v1.GraphServiceLinkResponse, error)
-	// Unlink tombstones a relationship between two nodes.
+	// Unlink tombstones a relationship when a graph edge was wrong, duplicated,
+	// or no longer useful for retrieval.
 	Unlink(context.Context, *v1.GraphServiceUnlinkRequest) (*v1.GraphServiceUnlinkResponse, error)
-	// Neighbors returns nearby units and relationships.
+	// Neighbors returns nearby units and relationships so an agent can inspect
+	// adjacent issues, solution clusters, and root-cause neighborhoods.
 	Neighbors(context.Context, *v1.GraphServiceNeighborsRequest) (*v1.GraphServiceNeighborsResponse, error)
-	// ExplainPath explains why two units or problems are connected.
+	// ExplainPath explains why two units or problems are connected, returning the
+	// graph edges that justify the relationship when a path is known.
 	ExplainPath(context.Context, *v1.GraphServiceExplainPathRequest) (*v1.GraphServiceExplainPathResponse, error)
 }
 
@@ -437,13 +459,17 @@ func (c *graphServiceClient) ExplainPath(ctx context.Context, req *v1.GraphServi
 
 // GraphServiceHandler is an implementation of the consensus.v1.GraphService service.
 type GraphServiceHandler interface {
-	// Link creates a typed relationship between two nodes.
+	// Link creates a typed relationship between two knowledge or problem nodes,
+	// such as related, same_root_cause, supersedes, requires, or contradicts.
 	Link(context.Context, *v1.GraphServiceLinkRequest) (*v1.GraphServiceLinkResponse, error)
-	// Unlink tombstones a relationship between two nodes.
+	// Unlink tombstones a relationship when a graph edge was wrong, duplicated,
+	// or no longer useful for retrieval.
 	Unlink(context.Context, *v1.GraphServiceUnlinkRequest) (*v1.GraphServiceUnlinkResponse, error)
-	// Neighbors returns nearby units and relationships.
+	// Neighbors returns nearby units and relationships so an agent can inspect
+	// adjacent issues, solution clusters, and root-cause neighborhoods.
 	Neighbors(context.Context, *v1.GraphServiceNeighborsRequest) (*v1.GraphServiceNeighborsResponse, error)
-	// ExplainPath explains why two units or problems are connected.
+	// ExplainPath explains why two units or problems are connected, returning the
+	// graph edges that justify the relationship when a path is known.
 	ExplainPath(context.Context, *v1.GraphServiceExplainPathRequest) (*v1.GraphServiceExplainPathResponse, error)
 }
 

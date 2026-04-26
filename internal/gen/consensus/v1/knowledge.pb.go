@@ -23,21 +23,41 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// KnowledgeUnit is the durable piece of learning Consensus stores. It should be
+// compact enough for an agent to read into context and structured enough for
+// retrieval, review, voting, and graph linking.
 type KnowledgeUnit struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title           string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Summary         string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail          string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
-	Action          string                 `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
-	Kind            string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
-	Labels          []string               `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty"`
-	Context         map[string]string      `protobuf:"bytes,8,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	EvidenceRefs    []*EvidenceRef         `protobuf:"bytes,9,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
-	ReviewState     string                 `protobuf:"bytes,10,opt,name=review_state,json=reviewState,proto3" json:"review_state,omitempty"`
-	LifecycleState  string                 `protobuf:"bytes,11,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable UUID for this knowledge unit.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Human-readable title for scanning search results and admin review queues.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Short answer or lesson learned. Keep this high signal and directly usable.
+	Summary string `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	// Longer explanation with relevant constraints, failure mode, or reasoning.
+	Detail string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
+	// Concrete next step an agent should take when this unit applies.
+	Action string `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
+	// Category such as finding, pitfall, runbook, workaround, root_cause, or policy.
+	Kind string `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Retrieval and routing labels such as language, framework, service, tool, repo,
+	// error family, or deployment environment.
+	Labels []string `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty"`
+	// Structured context used for matching and filtering, for example language=go,
+	// framework=nextjs, repo_area=admin-ui, service=posthog, or platform=kubernetes.
+	Context map[string]string `protobuf:"bytes,8,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Evidence that supports the finding, such as logs, command output, docs,
+	// source links, issue links, or test proof.
+	EvidenceRefs []*EvidenceRef `protobuf:"bytes,9,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
+	// Moderation/review state such as accepted, pending, disputed, or rejected.
+	ReviewState string `protobuf:"bytes,10,opt,name=review_state,json=reviewState,proto3" json:"review_state,omitempty"`
+	// Lifecycle state such as active, archived, superseded, or deleted.
+	LifecycleState string `protobuf:"bytes,11,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
+	// Creation timestamp assigned by the server.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Last update timestamp assigned by the server.
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Last time a solved/helpful vote or review process confirmed this unit.
 	LastConfirmedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=last_confirmed_at,json=lastConfirmedAt,proto3" json:"last_confirmed_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -171,12 +191,18 @@ func (x *KnowledgeUnit) GetLastConfirmedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// EvidenceRef points to source material that lets later agents verify why a
+// knowledge unit should be trusted.
 type EvidenceRef struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Uri           string                 `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	Excerpt       string                 `protobuf:"bytes,4,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Evidence type such as log, command_output, docs, source, issue, trace, or test.
+	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Short label for the evidence.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Optional URI for a source document, issue, log view, trace, file, or resource.
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	// Small relevant excerpt. Avoid storing whole conversations or large logs.
+	Excerpt       string `protobuf:"bytes,4,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -239,12 +265,22 @@ func (x *EvidenceRef) GetExcerpt() string {
 	return ""
 }
 
+// KnowledgeServiceSearchRequest asks Consensus for previously proven context
+// that may apply to the current problem.
 type KnowledgeServiceSearchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	Labels        []string               `protobuf:"bytes,2,rep,name=labels,proto3" json:"labels,omitempty"`
-	Context       map[string]string      `protobuf:"bytes,3,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Natural-language problem statement, error text, stack trace, failing command,
+	// or task description. This is required and should include the most specific
+	// symptom available.
+	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// Optional retrieval labels to narrow results to a stack, tool, service, repo,
+	// or environment.
+	Labels []string `protobuf:"bytes,2,rep,name=labels,proto3" json:"labels,omitempty"`
+	// Optional structured context for matching and filtering, such as language,
+	// framework, version, platform, repo area, service, or deployment target.
+	Context map[string]string `protobuf:"bytes,3,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Maximum number of results. The server chooses a practical default when zero.
+	Limit         int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -307,6 +343,7 @@ func (x *KnowledgeServiceSearchRequest) GetLimit() int32 {
 	return 0
 }
 
+// KnowledgeServiceSearchResponse returns ranked matches with ranking rationale.
 type KnowledgeServiceSearchResponse struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Results       []*KnowledgeSearchResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
@@ -351,12 +388,18 @@ func (x *KnowledgeServiceSearchResponse) GetResults() []*KnowledgeSearchResult {
 	return nil
 }
 
+// KnowledgeSearchResult wraps a candidate unit with scoring details so an agent
+// can decide whether and how strongly to use it.
 type KnowledgeSearchResult struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Unit           *KnowledgeUnit         `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
-	Score          float64                `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
-	RankReason     string                 `protobuf:"bytes,3,opt,name=rank_reason,json=rankReason,proto3" json:"rank_reason,omitempty"`
-	MatchedSignals []string               `protobuf:"bytes,4,rep,name=matched_signals,json=matchedSignals,proto3" json:"matched_signals,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Matched knowledge unit.
+	Unit *KnowledgeUnit `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
+	// Relative ranking score assigned by the retrieval layer.
+	Score float64 `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
+	// Short explanation of why this unit ranked where it did.
+	RankReason string `protobuf:"bytes,3,opt,name=rank_reason,json=rankReason,proto3" json:"rank_reason,omitempty"`
+	// Signals that matched, such as text, label, context, vote, graph, or vector.
+	MatchedSignals []string `protobuf:"bytes,4,rep,name=matched_signals,json=matchedSignals,proto3" json:"matched_signals,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -419,9 +462,11 @@ func (x *KnowledgeSearchResult) GetMatchedSignals() []string {
 	return nil
 }
 
+// KnowledgeServiceGetRequest fetches one stored knowledge unit.
 type KnowledgeServiceGetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Knowledge unit UUID.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -463,6 +508,7 @@ func (x *KnowledgeServiceGetRequest) GetId() string {
 	return ""
 }
 
+// KnowledgeServiceGetResponse contains the requested knowledge unit.
 type KnowledgeServiceGetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Unit          *KnowledgeUnit         `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
@@ -507,17 +553,28 @@ func (x *KnowledgeServiceGetResponse) GetUnit() *KnowledgeUnit {
 	return nil
 }
 
+// KnowledgeServiceContributeRequest submits a durable finding after a thread
+// produces something later agents should reuse.
 type KnowledgeServiceContributeRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Title          string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	Summary        string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail         string                 `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
-	Action         string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
-	Kind           string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
-	Labels         []string               `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty"`
-	Context        map[string]string      `protobuf:"bytes,7,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	EvidenceRefs   []*EvidenceRef         `protobuf:"bytes,8,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Human-readable title for the reusable finding.
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Compact answer or lesson learned.
+	Summary string `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	// Longer explanation of the symptom, context, constraints, or reasoning.
+	Detail string `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	// Concrete action future agents should take when this unit applies.
+	Action string `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	// Category such as finding, pitfall, runbook, workaround, root_cause, or policy.
+	Kind string `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Retrieval and routing labels for the stack, tool, service, repo, or error family.
+	Labels []string `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty"`
+	// Structured context for matching and filtering.
+	Context map[string]string `protobuf:"bytes,7,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Evidence proving or explaining the finding.
+	EvidenceRefs []*EvidenceRef `protobuf:"bytes,8,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
+	// Optional client-supplied key for deduplicating retries.
+	IdempotencyKey string `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -615,6 +672,8 @@ func (x *KnowledgeServiceContributeRequest) GetIdempotencyKey() string {
 	return ""
 }
 
+// KnowledgeServiceContributeResponse returns the created unit and whether human
+// or policy review is still required before it should influence retrieval.
 type KnowledgeServiceContributeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Unit          *KnowledgeUnit         `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
@@ -667,17 +726,29 @@ func (x *KnowledgeServiceContributeResponse) GetPendingReview() bool {
 	return false
 }
 
+// KnowledgeServiceUpdateRequest amends an existing unit. Empty scalar fields are
+// treated as omitted by the first implementation; repeated and map fields replace
+// existing values when present.
 type KnowledgeServiceUpdateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Summary       string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail        string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
-	Action        string                 `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
-	Kind          string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
-	Labels        []string               `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty"`
-	Context       map[string]string      `protobuf:"bytes,8,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	EvidenceRefs  []*EvidenceRef         `protobuf:"bytes,9,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Knowledge unit UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Replacement title.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Replacement summary.
+	Summary string `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	// Replacement detail.
+	Detail string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
+	// Replacement concrete action.
+	Action string `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
+	// Replacement kind/category.
+	Kind string `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Replacement label set.
+	Labels []string `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty"`
+	// Replacement structured context.
+	Context map[string]string `protobuf:"bytes,8,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Replacement evidence set.
+	EvidenceRefs  []*EvidenceRef `protobuf:"bytes,9,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -775,6 +846,7 @@ func (x *KnowledgeServiceUpdateRequest) GetEvidenceRefs() []*EvidenceRef {
 	return nil
 }
 
+// KnowledgeServiceUpdateResponse returns the updated unit.
 type KnowledgeServiceUpdateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Unit          *KnowledgeUnit         `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
@@ -819,15 +891,21 @@ func (x *KnowledgeServiceUpdateResponse) GetUnit() *KnowledgeUnit {
 	return nil
 }
 
+// VoteServiceCastRequest records whether a unit worked for the current agent.
 type VoteServiceCastRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	KnowledgeUnitId string                 `protobuf:"bytes,1,opt,name=knowledge_unit_id,json=knowledgeUnitId,proto3" json:"knowledge_unit_id,omitempty"`
-	Outcome         string                 `protobuf:"bytes,2,opt,name=outcome,proto3" json:"outcome,omitempty"`
-	Confidence      float64                `protobuf:"fixed64,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	Rationale       string                 `protobuf:"bytes,4,opt,name=rationale,proto3" json:"rationale,omitempty"`
-	IdempotencyKey  string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Knowledge unit UUID being evaluated.
+	KnowledgeUnitId string `protobuf:"bytes,1,opt,name=knowledge_unit_id,json=knowledgeUnitId,proto3" json:"knowledge_unit_id,omitempty"`
+	// Utility outcome. Expected values include solved, helped, failed, and stale.
+	Outcome string `protobuf:"bytes,2,opt,name=outcome,proto3" json:"outcome,omitempty"`
+	// Optional confidence from 0.0 to 1.0.
+	Confidence float64 `protobuf:"fixed64,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	// Short explanation of the observed result.
+	Rationale string `protobuf:"bytes,4,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	// Optional client-supplied key for deduplicating retries.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *VoteServiceCastRequest) Reset() {
@@ -895,6 +973,7 @@ func (x *VoteServiceCastRequest) GetIdempotencyKey() string {
 	return ""
 }
 
+// VoteServiceCastResponse returns the created vote ID.
 type VoteServiceCastResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	VoteId        string                 `protobuf:"bytes,1,opt,name=vote_id,json=voteId,proto3" json:"vote_id,omitempty"`
@@ -939,9 +1018,11 @@ func (x *VoteServiceCastResponse) GetVoteId() string {
 	return ""
 }
 
+// VoteServiceRetractRequest removes or corrects a previous utility vote.
 type VoteServiceRetractRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	VoteId        string                 `protobuf:"bytes,1,opt,name=vote_id,json=voteId,proto3" json:"vote_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Vote UUID.
+	VoteId        string `protobuf:"bytes,1,opt,name=vote_id,json=voteId,proto3" json:"vote_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1019,12 +1100,18 @@ func (*VoteServiceRetractResponse) Descriptor() ([]byte, []int) {
 	return file_consensus_v1_knowledge_proto_rawDescGZIP(), []int{14}
 }
 
+// GraphServiceLinkRequest creates a typed relationship between two nodes.
 type GraphServiceLinkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FromId        string                 `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
-	ToId          string                 `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
-	Relationship  string                 `protobuf:"bytes,3,opt,name=relationship,proto3" json:"relationship,omitempty"`
-	Rationale     string                 `protobuf:"bytes,4,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Source knowledge unit or problem node UUID.
+	FromId string `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	// Target knowledge unit or problem node UUID.
+	ToId string `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
+	// Relationship type such as related, same_root_cause, supersedes, requires,
+	// or contradicts.
+	Relationship string `protobuf:"bytes,3,opt,name=relationship,proto3" json:"relationship,omitempty"`
+	// Short explanation for why this edge should exist.
+	Rationale     string `protobuf:"bytes,4,opt,name=rationale,proto3" json:"rationale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1087,6 +1174,7 @@ func (x *GraphServiceLinkRequest) GetRationale() string {
 	return ""
 }
 
+// GraphServiceLinkResponse returns the created edge ID.
 type GraphServiceLinkResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EdgeId        string                 `protobuf:"bytes,1,opt,name=edge_id,json=edgeId,proto3" json:"edge_id,omitempty"`
@@ -1131,9 +1219,11 @@ func (x *GraphServiceLinkResponse) GetEdgeId() string {
 	return ""
 }
 
+// GraphServiceUnlinkRequest removes a graph edge.
 type GraphServiceUnlinkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EdgeId        string                 `protobuf:"bytes,1,opt,name=edge_id,json=edgeId,proto3" json:"edge_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Graph edge UUID.
+	EdgeId        string `protobuf:"bytes,1,opt,name=edge_id,json=edgeId,proto3" json:"edge_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1211,10 +1301,14 @@ func (*GraphServiceUnlinkResponse) Descriptor() ([]byte, []int) {
 	return file_consensus_v1_knowledge_proto_rawDescGZIP(), []int{18}
 }
 
+// GraphServiceNeighborsRequest explores a node's nearby knowledge graph.
 type GraphServiceNeighborsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Knowledge unit or problem node UUID.
+	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	// Maximum number of nearby edges/units to return. The server chooses a
+	// practical default when zero.
+	Limit         int32 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1263,6 +1357,7 @@ func (x *GraphServiceNeighborsRequest) GetLimit() int32 {
 	return 0
 }
 
+// GraphServiceNeighborsResponse returns nearby units and the edges connecting them.
 type GraphServiceNeighborsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Units         []*KnowledgeUnit       `protobuf:"bytes,1,rep,name=units,proto3" json:"units,omitempty"`
@@ -1315,13 +1410,19 @@ func (x *GraphServiceNeighborsResponse) GetEdges() []*GraphEdge {
 	return nil
 }
 
+// GraphEdge is a typed relationship between two knowledge or problem nodes.
 type GraphEdge struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	FromId        string                 `protobuf:"bytes,2,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
-	ToId          string                 `protobuf:"bytes,3,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
-	Relationship  string                 `protobuf:"bytes,4,opt,name=relationship,proto3" json:"relationship,omitempty"`
-	Rationale     string                 `protobuf:"bytes,5,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable edge UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Source node UUID.
+	FromId string `protobuf:"bytes,2,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	// Target node UUID.
+	ToId string `protobuf:"bytes,3,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
+	// Relationship type.
+	Relationship string `protobuf:"bytes,4,opt,name=relationship,proto3" json:"relationship,omitempty"`
+	// Explanation for the relationship.
+	Rationale     string `protobuf:"bytes,5,opt,name=rationale,proto3" json:"rationale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1391,10 +1492,13 @@ func (x *GraphEdge) GetRationale() string {
 	return ""
 }
 
+// GraphServiceExplainPathRequest asks why two nodes are connected.
 type GraphServiceExplainPathRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FromId        string                 `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
-	ToId          string                 `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Starting knowledge unit or problem node UUID.
+	FromId string `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	// Ending knowledge unit or problem node UUID.
+	ToId          string `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1443,10 +1547,13 @@ func (x *GraphServiceExplainPathRequest) GetToId() string {
 	return ""
 }
 
+// GraphServiceExplainPathResponse explains the known graph relationship.
 type GraphServiceExplainPathResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Explanation   string                 `protobuf:"bytes,1,opt,name=explanation,proto3" json:"explanation,omitempty"`
-	Edges         []*GraphEdge           `protobuf:"bytes,2,rep,name=edges,proto3" json:"edges,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Human-readable explanation of the path or lack of a known path.
+	Explanation string `protobuf:"bytes,1,opt,name=explanation,proto3" json:"explanation,omitempty"`
+	// Edges that justify the explanation.
+	Edges         []*GraphEdge `protobuf:"bytes,2,rep,name=edges,proto3" json:"edges,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -26,6 +26,30 @@ func NewService(db *postgres.Client) *Service {
 	return &Service{db: db}
 }
 
+func (s *Service) ListRecentKnowledge(ctx context.Context, limit int) ([]*consensusv1.KnowledgeUnit, error) {
+	if s.db == nil {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 25
+	}
+
+	units, err := s.db.KnowledgeUnit.Query().
+		Where(knowledgeunit.TenantKey(defaultTenantKey)).
+		Order(postgres.Desc(knowledgeunit.FieldUpdatedAt)).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list recent knowledge: %w", err)
+	}
+
+	out := make([]*consensusv1.KnowledgeUnit, 0, len(units))
+	for _, unit := range units {
+		out = append(out, toProtoKnowledgeUnit(unit))
+	}
+	return out, nil
+}
+
 func (s *Service) Search(ctx context.Context, req *consensusv1.KnowledgeServiceSearchRequest) (*consensusv1.KnowledgeServiceSearchResponse, error) {
 	rawQuery := strings.TrimSpace(req.GetQuery())
 	if rawQuery == "" {

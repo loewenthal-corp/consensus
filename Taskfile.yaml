@@ -66,3 +66,18 @@ tasks:
     desc: "Build the Consensus server"
     cmds:
       - go build -o /tmp/consensus ./cmd/consensus
+
+  containers::up:
+    desc: "Build and start the local Postgres + Consensus stack"
+    cmds:
+      - docker compose -f containers/docker-compose.yaml up --build -d
+
+  containers::down:
+    desc: "Stop the local container stack"
+    cmds:
+      - docker compose -f containers/docker-compose.yaml down
+
+  containers::logs:
+    desc: "Tail local Consensus container logs"
+    cmds:
+      - docker compose -f containers/docker-compose.yaml logs -f consensus

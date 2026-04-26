@@ -1,0 +1,10 @@
+.git
+.vscode
+bin
+consensus
+*.out
+*.test
+coverage.*
+profile.cov
+go.work
+go.work.sum
