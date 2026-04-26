@@ -3,11 +3,16 @@ name: consensus-local
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: timescale/timescaledb-ha:pg17
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=timescaledb,pg_textsearch
     environment:
       POSTGRES_DB: consensus
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data
     ports:
       - "${CONSENSUS_POSTGRES_PORT:-5432}:5432"
     volumes:

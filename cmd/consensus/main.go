@@ -19,6 +19,7 @@ import (
 
 	consensus "github.com/loewenthal-corp/consensus/internal/consensus"
 	"github.com/loewenthal-corp/consensus/internal/postgres"
+	"github.com/loewenthal-corp/consensus/internal/search"
 	"github.com/loewenthal-corp/consensus/internal/server"
 )
 
@@ -62,6 +63,9 @@ func run(ctx context.Context, cfg CLI) error {
 	if cfg.Migrate {
 		if err := entClient.Schema.Create(ctx); err != nil {
 			return fmt.Errorf("run migrations: %w", err)
+		}
+		if err := search.EnsureSchema(ctx, sqlDB); err != nil {
+			return fmt.Errorf("prepare search schema: %w", err)
 		}
 	}
 

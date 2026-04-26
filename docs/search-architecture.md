@@ -1,6 +1,6 @@
 # Search Architecture Proposal
 
-Status: proposal
+Status: implementation started
 
 Information about extension maturity and version support is current as of
 April 26, 2026.
@@ -44,20 +44,28 @@ the storage and ranking layer with Postgres-native extensions and Go services.
 - Consensus should not hide ranking logic in a black box. SQL-visible signals
   and score traces are part of the product.
 
-## Current State
+## Current Implementation
 
-The current `InsightService.Search` implementation performs case-insensitive
-substring matching across the main insight fields and orders results by
-`updated_at`. That is sufficient for a bootstrap implementation, but it has
-several limitations:
+`InsightService.Search` now uses Postgres-backed search chunks and
+`pg_textsearch` BM25 ranking when the service runs against a Postgres image with
+the extension preloaded. Insight create and update paths synchronously refresh a
+single `main` search chunk built from title, problem, answer, action, detail,
+example, tags, context, and links. Search runs raw SQL over
+`insight_search_chunks`, collapses chunk results back to insights, returns BM25
+matched signals, and applies a bounded vote quality multiplier.
 
-- No inverted index for full-text search.
-- No real lexical relevance ranking.
+Local Docker Compose and Testcontainers use `timescale/timescaledb-ha:pg17`
+with `shared_preload_libraries=timescaledb,pg_textsearch`.
+
+Before this implementation, `InsightService.Search` performed
+case-insensitive substring matching across the main insight fields and ordered
+results by `updated_at`. The remaining limitations are:
+
 - No semantic search over embeddings.
-- No chunk-level retrieval.
-- No vote-aware or outcome-aware ranking.
-- No query explain data beyond a static rank reason.
-- No ability to combine independent retrieval signals.
+- No true multi-chunk splitting beyond the initial one-chunk-per-insight shape.
+- No vector retrieval or embedding generation.
+- No exact fingerprint or graph candidate lists in RRF yet.
+- No detailed score trace beyond compact rank reasons and matched signals.
 
 The existing data model already has useful primitives:
 

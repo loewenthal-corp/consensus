@@ -52,13 +52,27 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, created.GetInsight().GetId())
 
+	distractor, err := client.Create(ctx, &consensusv1.InsightServiceCreateRequest{
+		Title:   "Duplicate commit cleanup for source map artifacts",
+		Problem: "A build leaves duplicate source map artifacts after a commit is processed.",
+		Answer:  "Remove stale generated artifacts before publishing build output.",
+		Detail:  "This is unrelated to PostHog upload idempotency and does not mention the upload command.",
+		Action:  "Clean the build directory and rerun the artifact packaging step.",
+		Kind:    "runbook",
+		Tags:    []string{"build", "source-maps"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, distractor.GetInsight().GetId())
+
 	search, err := client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
-		Query: "source maps duplicate commit",
+		Query: "posthog sourcemaps upload duplicate commit",
 		Limit: 5,
 	})
 	require.NoError(t, err)
-	require.Len(t, search.GetResults(), 1)
+	require.NotEmpty(t, search.GetResults())
 	require.Equal(t, created.GetInsight().GetId(), search.GetResults()[0].GetInsight().GetId())
+	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "bm25")
+	require.Contains(t, search.GetResults()[0].GetRankReason(), "BM25")
 
 	got, err := client.Get(ctx, &consensusv1.InsightServiceGetRequest{Ref: created.GetInsight().GetId()})
 	require.NoError(t, err)
@@ -72,6 +86,14 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "Skip duplicate uploads before retrying the same commit.", updated.GetInsight().GetAction())
+
+	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
+		Query: "skip duplicate uploads retry commit",
+		Limit: 5,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, search.GetResults())
+	require.Equal(t, created.GetInsight().GetId(), search.GetResults()[0].GetInsight().GetId())
 
 	outcome, err := client.RecordOutcome(ctx, &consensusv1.InsightServiceRecordOutcomeRequest{
 		InsightRef: created.GetInsight().GetId(),

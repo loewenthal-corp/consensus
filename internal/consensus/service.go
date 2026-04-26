@@ -11,7 +11,7 @@ import (
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/postgres"
 	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
-	"github.com/loewenthal-corp/consensus/internal/postgres/predicate"
+	"github.com/loewenthal-corp/consensus/internal/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -27,11 +27,18 @@ var validOutcomes = map[string]struct{}{
 }
 
 type Service struct {
-	db *postgres.Client
+	db       *postgres.Client
+	searcher search.Searcher
 }
 
 func NewService(db *postgres.Client) *Service {
-	return &Service{db: db}
+	svc := &Service{db: db}
+	if db != nil {
+		if sqlDB := db.SQLDB(); sqlDB != nil {
+			svc.searcher = search.NewPostgresSearcher(sqlDB)
+		}
+	}
+	return svc
 }
 
 func (s *Service) ListRecentInsights(ctx context.Context, limit int) ([]*consensusv1.Insight, error) {
@@ -64,70 +71,52 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSea
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("query is required"))
 	}
 
-	limit := int(req.GetLimit())
-	if limit <= 0 {
-		limit = 10
+	if s.db == nil || s.searcher == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("search backend is not configured"))
 	}
 
-	query := s.db.Insight.Query().
-		Where(
-			insight.TenantKey(defaultTenantKey),
-			insight.LifecycleState("active"),
-			insight.Or(insightTextPredicates(rawQuery)...),
-		).
-		Limit(limit).
-		Order(postgres.Desc(insight.FieldUpdatedAt))
-
-	insights, err := query.All(ctx)
+	searchResults, err := s.searcher.Search(ctx, search.Request{
+		TenantKey: defaultTenantKey,
+		Query:     rawQuery,
+		Limit:     int(req.GetLimit()),
+	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("search insights: %w", err))
 	}
+	if len(searchResults) == 0 {
+		return &consensusv1.InsightServiceSearchResponse{}, nil
+	}
 
-	results := make([]*consensusv1.InsightSearchResult, 0, len(insights))
+	ids := make([]uuid.UUID, 0, len(searchResults))
+	for _, result := range searchResults {
+		ids = append(ids, result.InsightID)
+	}
+
+	insights, err := s.db.Insight.Query().
+		Where(insight.TenantKey(defaultTenantKey), insight.IDIn(ids...)).
+		All(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("load search insights: %w", err))
+	}
+	byID := make(map[uuid.UUID]*postgres.Insight, len(insights))
 	for _, item := range insights {
+		byID[item.ID] = item
+	}
+
+	results := make([]*consensusv1.InsightSearchResult, 0, len(searchResults))
+	for _, result := range searchResults {
+		item := byID[result.InsightID]
+		if item == nil {
+			continue
+		}
 		results = append(results, &consensusv1.InsightSearchResult{
 			Insight:        toProtoInsight(item),
-			Score:          1,
-			RankReason:     "matched text fields",
-			MatchedSignals: []string{"text"},
+			Score:          result.Score,
+			RankReason:     result.RankReason,
+			MatchedSignals: result.MatchedSignals,
 		})
 	}
 	return &consensusv1.InsightServiceSearchResponse{Results: results}, nil
-}
-
-func insightTextPredicates(query string) []predicate.Insight {
-	seen := make(map[string]struct{})
-	terms := make([]string, 0, 1+len(strings.Fields(query)))
-
-	addTerm := func(term string) {
-		term = strings.TrimSpace(term)
-		if term == "" {
-			return
-		}
-		key := strings.ToLower(term)
-		if _, ok := seen[key]; ok {
-			return
-		}
-		seen[key] = struct{}{}
-		terms = append(terms, term)
-	}
-
-	addTerm(query)
-	for _, term := range strings.Fields(query) {
-		addTerm(term)
-	}
-
-	predicates := make([]predicate.Insight, 0, len(terms)*5)
-	for _, term := range terms {
-		predicates = append(predicates,
-			insight.TitleContainsFold(term),
-			insight.ProblemContainsFold(term),
-			insight.AnswerContainsFold(term),
-			insight.DetailContainsFold(term),
-			insight.ActionContainsFold(term),
-		)
-	}
-	return predicates
 }
 
 func (s *Service) Get(ctx context.Context, req *consensusv1.InsightServiceGetRequest) (*consensusv1.InsightServiceGetResponse, error) {
@@ -164,6 +153,9 @@ func (s *Service) Create(ctx context.Context, req *consensusv1.InsightServiceCre
 		Save(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create insight: %w", err))
+	}
+	if err := s.indexInsight(ctx, item); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("index insight search chunks: %w", err))
 	}
 
 	return &consensusv1.InsightServiceCreateResponse{
@@ -217,6 +209,9 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpd
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update insight: %w", err))
 	}
+	if err := s.indexInsight(ctx, item); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("index insight search chunks: %w", err))
+	}
 	return &consensusv1.InsightServiceUpdateResponse{Insight: toProtoInsight(item)}, nil
 }
 
@@ -243,6 +238,13 @@ func (s *Service) RecordOutcome(ctx context.Context, req *consensusv1.InsightSer
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("record outcome: %w", err))
 	}
 	return &consensusv1.InsightServiceRecordOutcomeResponse{OutcomeId: created.ID.String()}, nil
+}
+
+func (s *Service) indexInsight(ctx context.Context, item *postgres.Insight) error {
+	if s == nil || s.searcher == nil {
+		return nil
+	}
+	return s.searcher.IndexInsight(ctx, item)
 }
 
 func parseLocalInsightRef(ref string) (uuid.UUID, error) {
