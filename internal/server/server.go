@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 
+	"github.com/loewenthal-corp/consensus/internal/buildinfo"
 	consensus "github.com/loewenthal-corp/consensus/internal/consensus"
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/gen/consensus/v1/consensusv1connect"
@@ -60,7 +61,7 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 	raw := mcp.NewServer(&mcp.Implementation{
 		Name:    "consensus",
 		Title:   "Consensus",
-		Version: "0.0.0",
+		Version: buildinfo.Version,
 	}, &mcp.ServerOptions{
 		Instructions: mcpInstructions,
 	})

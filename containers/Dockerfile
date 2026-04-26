@@ -4,6 +4,10 @@ ARG GO_VERSION=1.26
 
 FROM golang:${GO_VERSION}-alpine AS build
 
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+
 RUN apk add --no-cache ca-certificates git
 
 WORKDIR /src
@@ -14,7 +18,9 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/consensus ./cmd/consensus
+    CGO_ENABLED=0 GOOS=linux go build -trimpath \
+    -ldflags="-s -w -X github.com/loewenthal-corp/consensus/internal/buildinfo.Version=${VERSION} -X github.com/loewenthal-corp/consensus/internal/buildinfo.Commit=${GIT_COMMIT} -X github.com/loewenthal-corp/consensus/internal/buildinfo.Date=${BUILD_TIME}" \
+    -o /out/consensus ./cmd/consensus
 
 FROM alpine:3.22
 

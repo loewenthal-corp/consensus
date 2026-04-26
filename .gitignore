@@ -3,6 +3,7 @@
 #
 # Binaries for programs and plugins
 /consensus
+/dist/
 *.exe
 *.exe~
 *.dll

@@ -1,0 +1,24 @@
+---
+name: containers
+
+"on":
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-consensus:
+    uses: ./.github/workflows/docker-build.yaml
+    with:
+      image: consensus
+      tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      push: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
