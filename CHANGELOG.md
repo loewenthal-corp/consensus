@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/loewenthal-corp/consensus/compare/v0.2.0...v0.3.0) (2026-04-27)
+
+
+### Features
+
+* logging and tracing ([d01423e](https://github.com/loewenthal-corp/consensus/commit/d01423e62415221d682395f4be024f5288f5763f))
+* simplify, simplify ([dda89d8](https://github.com/loewenthal-corp/consensus/commit/dda89d84aa55c7f62c821b99991102b1be23fc17))
+
 ## [0.2.0](https://github.com/loewenthal-corp/consensus/compare/v0.1.0...v0.2.0) (2026-04-26)
 
 
