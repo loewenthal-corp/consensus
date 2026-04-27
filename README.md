@@ -73,6 +73,11 @@ Core surfaces:
 - Postgres as the system of record, with full-text and vector search planned.
 - A small `/admin` UI for search, review, moderation, and operations.
 
+For local debugging, start the server with `LOG_LEVEL=debug` or `DEBUG=true`.
+Consensus emits one structured `insight exchange` log per Connect RPC or MCP
+tool call with the transport, method/tool, trace ID when available, duration,
+outcome, request payload, and response payload.
+
 Local SQLite can be useful for tests or single-developer demos, but it is not the
 product center of gravity.
 

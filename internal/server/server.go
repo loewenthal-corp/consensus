@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
@@ -37,7 +39,9 @@ func NewAPI(cfg Config) (http.Handler, error) {
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	mux.HandleFunc("GET /admin/", handleAdmin(cfg.Service))
 
-	registerConnectHandlers(mux, cfg.Service)
+	if err := registerConnectHandlers(mux, cfg.Service); err != nil {
+		return nil, err
+	}
 
 	return requestMiddleware(mux), nil
 }
@@ -57,9 +61,20 @@ func NewMCP(cfg Config) (http.Handler, error) {
 	return requestMiddleware(mux), nil
 }
 
-func registerConnectHandlers(mux *http.ServeMux, svc *consensus.Service) {
-	path, handler := consensusv1connect.NewInsightServiceHandler(svc)
+func registerConnectHandlers(mux *http.ServeMux, svc *consensus.Service) error {
+	otelInterceptor, err := otelconnect.NewInterceptor(
+		otelconnect.WithTrustRemote(),
+		otelconnect.WithPropagateResponseHeader(),
+	)
+	if err != nil {
+		return fmt.Errorf("create otel interceptor: %w", err)
+	}
+
+	path, handler := consensusv1connect.NewInsightServiceHandler(svc,
+		connect.WithInterceptors(newInsightExchangeLoggingInterceptor(nil), otelInterceptor),
+	)
 	mux.Handle(path, handler)
+	return nil
 }
 
 func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
@@ -132,23 +147,36 @@ func registerMCPTools(s runtime.MCPServer, sd protoreflect.ServiceDescriptor, ha
 
 		tool, _ := gen.ToolForMethod(method, mcpToolComment(method))
 		md := method
+		toolName := tool.Name
 		s.AddTool(tool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
+			ctx, finishExchange := beginMCPInsightExchange(ctx, md, toolName)
+			var concreteReq proto.Message
+			var concreteResp proto.Message
+			var exchangeErr error
+			defer func() {
+				finishExchange(concreteReq, concreteResp, request.Arguments, exchangeErr)
+			}()
+
 			marshaled, err := json.Marshal(request.Arguments)
 			if err != nil {
+				exchangeErr = err
 				return nil, err
 			}
-			req := gen.DynamicNewMessage(md.Input())
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, req); err != nil {
+			concreteReq = gen.DynamicNewMessage(md.Input())
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, concreteReq); err != nil {
+				exchangeErr = err
 				return nil, err
 			}
 
-			resp, err := handler(ctx, md, req)
+			concreteResp, err = handler(ctx, md, concreteReq)
 			if err != nil {
+				exchangeErr = err
 				return runtime.HandleError(err)
 			}
 
-			marshaled, err = (protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}).Marshal(resp)
+			marshaled, err = (protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}).Marshal(concreteResp)
 			if err != nil {
+				exchangeErr = err
 				return nil, err
 			}
 			return runtime.NewToolResultText(string(marshaled)), nil
