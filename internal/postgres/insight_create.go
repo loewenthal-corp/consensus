@@ -98,29 +98,9 @@ func (_c *InsightCreate) SetNillableAction(v *string) *InsightCreate {
 	return _c
 }
 
-// SetKind sets the "kind" field.
-func (_c *InsightCreate) SetKind(v string) *InsightCreate {
-	_c.mutation.SetKind(v)
-	return _c
-}
-
-// SetNillableKind sets the "kind" field if the given value is not nil.
-func (_c *InsightCreate) SetNillableKind(v *string) *InsightCreate {
-	if v != nil {
-		_c.SetKind(*v)
-	}
-	return _c
-}
-
 // SetTags sets the "tags" field.
 func (_c *InsightCreate) SetTags(v []string) *InsightCreate {
 	_c.mutation.SetTags(v)
-	return _c
-}
-
-// SetContext sets the "context" field.
-func (_c *InsightCreate) SetContext(v map[string]string) *InsightCreate {
-	_c.mutation.SetContext(v)
 	return _c
 }
 
@@ -295,10 +275,6 @@ func (_c *InsightCreate) defaults() {
 		v := insight.DefaultTenantKey
 		_c.mutation.SetTenantKey(v)
 	}
-	if _, ok := _c.mutation.Kind(); !ok {
-		v := insight.DefaultKind
-		_c.mutation.SetKind(v)
-	}
 	if _, ok := _c.mutation.ReviewState(); !ok {
 		v := insight.DefaultReviewState
 		_c.mutation.SetReviewState(v)
@@ -345,14 +321,6 @@ func (_c *InsightCreate) check() error {
 	if v, ok := _c.mutation.Answer(); ok {
 		if err := insight.AnswerValidator(v); err != nil {
 			return &ValidationError{Name: "answer", err: fmt.Errorf(`postgres: validator failed for field "Insight.answer": %w`, err)}
-		}
-	}
-	if _, ok := _c.mutation.Kind(); !ok {
-		return &ValidationError{Name: "kind", err: errors.New(`postgres: missing required field "Insight.kind"`)}
-	}
-	if v, ok := _c.mutation.Kind(); ok {
-		if err := insight.KindValidator(v); err != nil {
-			return &ValidationError{Name: "kind", err: fmt.Errorf(`postgres: validator failed for field "Insight.kind": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.SourceRunID(); ok {
@@ -446,17 +414,9 @@ func (_c *InsightCreate) createSpec() (*Insight, *sqlgraph.CreateSpec) {
 		_spec.SetField(insight.FieldAction, field.TypeString, value)
 		_node.Action = value
 	}
-	if value, ok := _c.mutation.Kind(); ok {
-		_spec.SetField(insight.FieldKind, field.TypeString, value)
-		_node.Kind = value
-	}
 	if value, ok := _c.mutation.Tags(); ok {
 		_spec.SetField(insight.FieldTags, field.TypeJSON, value)
 		_node.Tags = value
-	}
-	if value, ok := _c.mutation.Context(); ok {
-		_spec.SetField(insight.FieldContext, field.TypeJSON, value)
-		_node.Context = value
 	}
 	if value, ok := _c.mutation.Links(); ok {
 		_spec.SetField(insight.FieldLinks, field.TypeJSON, value)
@@ -654,18 +614,6 @@ func (u *InsightUpsert) ClearAction() *InsightUpsert {
 	return u
 }
 
-// SetKind sets the "kind" field.
-func (u *InsightUpsert) SetKind(v string) *InsightUpsert {
-	u.Set(insight.FieldKind, v)
-	return u
-}
-
-// UpdateKind sets the "kind" field to the value that was provided on create.
-func (u *InsightUpsert) UpdateKind() *InsightUpsert {
-	u.SetExcluded(insight.FieldKind)
-	return u
-}
-
 // SetTags sets the "tags" field.
 func (u *InsightUpsert) SetTags(v []string) *InsightUpsert {
 	u.Set(insight.FieldTags, v)
@@ -681,24 +629,6 @@ func (u *InsightUpsert) UpdateTags() *InsightUpsert {
 // ClearTags clears the value of the "tags" field.
 func (u *InsightUpsert) ClearTags() *InsightUpsert {
 	u.SetNull(insight.FieldTags)
-	return u
-}
-
-// SetContext sets the "context" field.
-func (u *InsightUpsert) SetContext(v map[string]string) *InsightUpsert {
-	u.Set(insight.FieldContext, v)
-	return u
-}
-
-// UpdateContext sets the "context" field to the value that was provided on create.
-func (u *InsightUpsert) UpdateContext() *InsightUpsert {
-	u.SetExcluded(insight.FieldContext)
-	return u
-}
-
-// ClearContext clears the value of the "context" field.
-func (u *InsightUpsert) ClearContext() *InsightUpsert {
-	u.SetNull(insight.FieldContext)
 	return u
 }
 
@@ -1005,20 +935,6 @@ func (u *InsightUpsertOne) ClearAction() *InsightUpsertOne {
 	})
 }
 
-// SetKind sets the "kind" field.
-func (u *InsightUpsertOne) SetKind(v string) *InsightUpsertOne {
-	return u.Update(func(s *InsightUpsert) {
-		s.SetKind(v)
-	})
-}
-
-// UpdateKind sets the "kind" field to the value that was provided on create.
-func (u *InsightUpsertOne) UpdateKind() *InsightUpsertOne {
-	return u.Update(func(s *InsightUpsert) {
-		s.UpdateKind()
-	})
-}
-
 // SetTags sets the "tags" field.
 func (u *InsightUpsertOne) SetTags(v []string) *InsightUpsertOne {
 	return u.Update(func(s *InsightUpsert) {
@@ -1037,27 +953,6 @@ func (u *InsightUpsertOne) UpdateTags() *InsightUpsertOne {
 func (u *InsightUpsertOne) ClearTags() *InsightUpsertOne {
 	return u.Update(func(s *InsightUpsert) {
 		s.ClearTags()
-	})
-}
-
-// SetContext sets the "context" field.
-func (u *InsightUpsertOne) SetContext(v map[string]string) *InsightUpsertOne {
-	return u.Update(func(s *InsightUpsert) {
-		s.SetContext(v)
-	})
-}
-
-// UpdateContext sets the "context" field to the value that was provided on create.
-func (u *InsightUpsertOne) UpdateContext() *InsightUpsertOne {
-	return u.Update(func(s *InsightUpsert) {
-		s.UpdateContext()
-	})
-}
-
-// ClearContext clears the value of the "context" field.
-func (u *InsightUpsertOne) ClearContext() *InsightUpsertOne {
-	return u.Update(func(s *InsightUpsert) {
-		s.ClearContext()
 	})
 }
 
@@ -1552,20 +1447,6 @@ func (u *InsightUpsertBulk) ClearAction() *InsightUpsertBulk {
 	})
 }
 
-// SetKind sets the "kind" field.
-func (u *InsightUpsertBulk) SetKind(v string) *InsightUpsertBulk {
-	return u.Update(func(s *InsightUpsert) {
-		s.SetKind(v)
-	})
-}
-
-// UpdateKind sets the "kind" field to the value that was provided on create.
-func (u *InsightUpsertBulk) UpdateKind() *InsightUpsertBulk {
-	return u.Update(func(s *InsightUpsert) {
-		s.UpdateKind()
-	})
-}
-
 // SetTags sets the "tags" field.
 func (u *InsightUpsertBulk) SetTags(v []string) *InsightUpsertBulk {
 	return u.Update(func(s *InsightUpsert) {
@@ -1584,27 +1465,6 @@ func (u *InsightUpsertBulk) UpdateTags() *InsightUpsertBulk {
 func (u *InsightUpsertBulk) ClearTags() *InsightUpsertBulk {
 	return u.Update(func(s *InsightUpsert) {
 		s.ClearTags()
-	})
-}
-
-// SetContext sets the "context" field.
-func (u *InsightUpsertBulk) SetContext(v map[string]string) *InsightUpsertBulk {
-	return u.Update(func(s *InsightUpsert) {
-		s.SetContext(v)
-	})
-}
-
-// UpdateContext sets the "context" field to the value that was provided on create.
-func (u *InsightUpsertBulk) UpdateContext() *InsightUpsertBulk {
-	return u.Update(func(s *InsightUpsert) {
-		s.UpdateContext()
-	})
-}
-
-// ClearContext clears the value of the "context" field.
-func (u *InsightUpsertBulk) ClearContext() *InsightUpsertBulk {
-	return u.Update(func(s *InsightUpsert) {
-		s.ClearContext()
 	})
 }
 

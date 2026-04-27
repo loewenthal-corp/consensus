@@ -84,6 +84,11 @@ tasks:
     cmds:
       - docker compose -f containers/docker-compose.yaml up --build -d
 
+  containers::watch:
+    desc: "Start the local stack and rebuild Consensus on source changes"
+    cmds:
+      - docker compose -f containers/docker-compose.yaml up --build --watch
+
   containers::down:
     desc: "Stop the local container stack"
     cmds:

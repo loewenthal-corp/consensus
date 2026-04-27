@@ -6,6 +6,14 @@ Run the local Postgres and Consensus stack:
 task containers::up
 ```
 
+For development, run the stack in Compose Watch mode so the Consensus image is
+rebuilt and the service container is replaced when Go, proto, or container build
+inputs change:
+
+```sh
+task containers::watch
+```
+
 The local endpoints are:
 
 - Admin UI: <http://localhost:8080/admin/>

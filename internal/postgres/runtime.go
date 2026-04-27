@@ -310,32 +310,12 @@ func init() {
 			return nil
 		}
 	}()
-	// insightDescKind is the schema descriptor for kind field.
-	insightDescKind := insightFields[8].Descriptor()
-	// insight.DefaultKind holds the default value on creation for the kind field.
-	insight.DefaultKind = insightDescKind.Default.(string)
-	// insight.KindValidator is a validator for the "kind" field. It is called by the builders before save.
-	insight.KindValidator = func() func(string) error {
-		validators := insightDescKind.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(kind string) error {
-			for _, fn := range fns {
-				if err := fn(kind); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
 	// insightDescSourceRunID is the schema descriptor for source_run_id field.
-	insightDescSourceRunID := insightFields[13].Descriptor()
+	insightDescSourceRunID := insightFields[11].Descriptor()
 	// insight.SourceRunIDValidator is a validator for the "source_run_id" field. It is called by the builders before save.
 	insight.SourceRunIDValidator = insightDescSourceRunID.Validators[0].(func(string) error)
 	// insightDescReviewState is the schema descriptor for review_state field.
-	insightDescReviewState := insightFields[14].Descriptor()
+	insightDescReviewState := insightFields[12].Descriptor()
 	// insight.DefaultReviewState holds the default value on creation for the review_state field.
 	insight.DefaultReviewState = insightDescReviewState.Default.(string)
 	// insight.ReviewStateValidator is a validator for the "review_state" field. It is called by the builders before save.
@@ -355,7 +335,7 @@ func init() {
 		}
 	}()
 	// insightDescLifecycleState is the schema descriptor for lifecycle_state field.
-	insightDescLifecycleState := insightFields[15].Descriptor()
+	insightDescLifecycleState := insightFields[13].Descriptor()
 	// insight.DefaultLifecycleState holds the default value on creation for the lifecycle_state field.
 	insight.DefaultLifecycleState = insightDescLifecycleState.Default.(string)
 	// insight.LifecycleStateValidator is a validator for the "lifecycle_state" field. It is called by the builders before save.
@@ -375,11 +355,11 @@ func init() {
 		}
 	}()
 	// insightDescCreatedAt is the schema descriptor for created_at field.
-	insightDescCreatedAt := insightFields[18].Descriptor()
+	insightDescCreatedAt := insightFields[16].Descriptor()
 	// insight.DefaultCreatedAt holds the default value on creation for the created_at field.
 	insight.DefaultCreatedAt = insightDescCreatedAt.Default.(func() time.Time)
 	// insightDescUpdatedAt is the schema descriptor for updated_at field.
-	insightDescUpdatedAt := insightFields[19].Descriptor()
+	insightDescUpdatedAt := insightFields[17].Descriptor()
 	// insight.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	insight.DefaultUpdatedAt = insightDescUpdatedAt.Default.(func() time.Time)
 	// insight.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

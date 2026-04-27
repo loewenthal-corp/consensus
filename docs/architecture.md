@@ -226,12 +226,14 @@ The intended implementation shape is:
 - The handler dispatches to the in-process service implementation and returns a
   proto response.
 
-Tool names are derived from full Protobuf method names by replacing dots with
-underscores, for example:
+Tool schemas are derived from Protobuf method descriptors. Tool names use short
+aliases for the allowlisted methods:
 
 ```text
-consensus.v1.InsightService.Search
--> consensus_v1_InsightService_Search
+consensus.v1.InsightService.Search -> search
+consensus.v1.InsightService.Get -> get
+consensus.v1.InsightService.Create -> create
+consensus.v1.InsightService.RecordOutcome -> record_outcome
 ```
 
 Descriptor-driven registration means `buf.gen.yaml` does not need to emit
@@ -290,10 +292,10 @@ loop to the agent's context.
 
 | Conceptual operation | Proto method | Scope | Mutates | Description |
 | --- | --- | --- | --- | --- |
-| `insight.search` | `InsightService.Search` | `insight:read` | No | Search local and optionally configured upstream insights for a problem, exact error, command, snippet, or context. |
-| `insight.get` | `InsightService.Get` | `insight:read` | No | Fetch one insight by local ID or federated reference. |
-| `insight.create` | `InsightService.Create` | `insight:write` | Yes | Submit a candidate local insight with situation, answer, action, optional example, and links. |
-| `insight.record_outcome` | `InsightService.RecordOutcome` | `outcome:write` | Yes | Record solved, helped, did_not_work, stale, incorrect, or not_applicable after applying the insight. |
+| `search` | `InsightService.Search` | `insight:read` | No | Search local and optionally configured upstream insights for a problem, exact error, command, snippet, or tag. |
+| `get` | `InsightService.Get` | `insight:read` | No | Fetch one insight by local ID or federated reference. |
+| `create` | `InsightService.Create` | `insight:write` | Yes | Submit a candidate local insight with situation, answer, action, optional example, and links. |
+| `record_outcome` | `InsightService.RecordOutcome` | `outcome:write` | Yes | Record solved, helped, did_not_work, stale, or incorrect after applying the insight. |
 
 `InsightService.Update` is part of the Connect API, not the default MCP surface.
 Edits, review, link repair, and other administrative operations should flow
@@ -374,9 +376,7 @@ not leak into the default MCP tool surface.
 | `example` | Optional code, command, config, log, trace, exact error, or version combination. |
 | `action` | What the agent should do. |
 | `detail` | Explanation, caveats, and reasoning. |
-| `kind` | `pitfall`, `workaround`, `fix`, `policy`, `runbook`, `root_cause`. |
-| `tags` | Technologies, products, libraries, services, tools, and concepts. |
-| `context` | Language, framework, version, command, platform, repo area, environment. |
+| `tags` | Technologies, products, libraries, services, tools, concepts, and scoped facts such as `repo:github.com/org/repo`, `file:path`, or `service:posthog`. |
 | `links` | Docs, related insights, source threads, issues, PRs, tickets, traces, logs, or test proof. |
 | `created_by_actor_id` | Agent or human contributor. |
 | `source_run_id` | Optional originating agent run or thread. |
@@ -395,7 +395,6 @@ combinations.
 
 | Field | Notes |
 | --- | --- |
-| `kind` | `code`, `command`, `config`, `error`, `log`, `trace`, or similar. |
 | `language` | Optional language or format such as `go`, `typescript`, `yaml`, `bash`, or `text`. |
 | `content` | Small, directly relevant example content. |
 | `command` | Optional command associated with the example. |
@@ -408,7 +407,6 @@ relationships into one agent-facing object.
 
 | Field | Notes |
 | --- | --- |
-| `kind` | `docs`, `related_insight`, `issue`, `pull_request`, `source_thread`, `evidence`, `test`, `trace`, `log`, `ticket`. |
 | `uri` | `https://...`, `consensus://...`, or a tool-specific URI. |
 | `title` | Short label. |
 | `description` | What this link helps verify or understand. |
@@ -446,7 +444,7 @@ was considered or applied, not generic preference.
 | `insight_ref` | Local insight ID or federated insight URI. |
 | `actor_id` | Agent or human. |
 | `tenant_id` | Tenant boundary and diversity signal. |
-| `outcome` | `solved`, `helped`, `did_not_work`, `stale`, `incorrect`, `not_applicable`. |
+| `outcome` | `solved`, `helped`, `did_not_work`, `stale`, `incorrect`. |
 | `confidence` | Optional numeric confidence from the caller. |
 | `rationale` | Short explanation, redacted by policy. |
 | `problem_fingerprint_id` | What situation the outcome applied to. |
@@ -739,8 +737,8 @@ same Go binary under `/admin`.
 Initial screens:
 
 - Search: query insights, inspect ranking evidence, and open links.
-- Review queue: approve, edit, reject, redact, or request more context.
-- Insight detail: show problem, answer, example, context, links, outcomes, and
+- Review queue: approve, edit, reject, redact, or request clearer evidence.
+- Insight detail: show problem, answer, example, tags, links, outcomes, and
   history.
 - Relationships: inspect related, same-root-cause, superseding, and conflicting
   links or internal edges.

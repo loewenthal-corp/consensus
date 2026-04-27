@@ -33,12 +33,8 @@ type Insight struct {
 	Detail string `json:"detail,omitempty"`
 	// Action holds the value of the "action" field.
 	Action string `json:"action,omitempty"`
-	// Kind holds the value of the "kind" field.
-	Kind string `json:"kind,omitempty"`
 	// Tags holds the value of the "tags" field.
 	Tags []string `json:"tags,omitempty"`
-	// Context holds the value of the "context" field.
-	Context map[string]string `json:"context,omitempty"`
 	// Links holds the value of the "links" field.
 	Links []map[string]string `json:"links,omitempty"`
 	// CreatedByActorID holds the value of the "created_by_actor_id" field.
@@ -67,9 +63,9 @@ func (*Insight) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case insight.FieldCreatedByActorID, insight.FieldSupersededByID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case insight.FieldExample, insight.FieldTags, insight.FieldContext, insight.FieldLinks:
+		case insight.FieldExample, insight.FieldTags, insight.FieldLinks:
 			values[i] = new([]byte)
-		case insight.FieldTenantKey, insight.FieldTitle, insight.FieldProblem, insight.FieldAnswer, insight.FieldDetail, insight.FieldAction, insight.FieldKind, insight.FieldSourceRunID, insight.FieldReviewState, insight.FieldLifecycleState:
+		case insight.FieldTenantKey, insight.FieldTitle, insight.FieldProblem, insight.FieldAnswer, insight.FieldDetail, insight.FieldAction, insight.FieldSourceRunID, insight.FieldReviewState, insight.FieldLifecycleState:
 			values[i] = new(sql.NullString)
 		case insight.FieldLastConfirmedAt, insight.FieldCreatedAt, insight.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -140,26 +136,12 @@ func (_m *Insight) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Action = value.String
 			}
-		case insight.FieldKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field kind", values[i])
-			} else if value.Valid {
-				_m.Kind = value.String
-			}
 		case insight.FieldTags:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field tags", values[i])
 			} else if value != nil && len(*value) > 0 {
 				if err := json.Unmarshal(*value, &_m.Tags); err != nil {
 					return fmt.Errorf("unmarshal field tags: %w", err)
-				}
-			}
-		case insight.FieldContext:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field context", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Context); err != nil {
-					return fmt.Errorf("unmarshal field context: %w", err)
 				}
 			}
 		case insight.FieldLinks:
@@ -279,14 +261,8 @@ func (_m *Insight) String() string {
 	builder.WriteString("action=")
 	builder.WriteString(_m.Action)
 	builder.WriteString(", ")
-	builder.WriteString("kind=")
-	builder.WriteString(_m.Kind)
-	builder.WriteString(", ")
 	builder.WriteString("tags=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Tags))
-	builder.WriteString(", ")
-	builder.WriteString("context=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Context))
 	builder.WriteString(", ")
 	builder.WriteString("links=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Links))

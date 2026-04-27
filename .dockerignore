@@ -2,6 +2,12 @@
 .vscode
 bin
 consensus
+benchmarks
+logs
+prepared
+runs
+seed
+workspaces
 *.out
 *.test
 coverage.*

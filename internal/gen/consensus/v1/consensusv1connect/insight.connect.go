@@ -48,24 +48,19 @@ const (
 
 // InsightServiceClient is a client for the consensus.v1.InsightService service.
 type InsightServiceClient interface {
-	// Search returns ranked insights for a concrete problem, exact error, failing
-	// command, stack trace, snippet, or repo/tool context. Use it as a one-shot
-	// retrieval tool before rediscovering a known issue; follow returned links or
-	// fetch a matching insight when useful.
+	// Find prior insights for a concrete problem, error, command, stack trace,
+	// snippet, or repo/tool detail.
 	Search(context.Context, *v1.InsightServiceSearchRequest) (*v1.InsightServiceSearchResponse, error)
-	// Get returns one insight by local ID or federated reference.
+	// Fetch one insight by ID or consensus URI.
 	Get(context.Context, *v1.InsightServiceGetRequest) (*v1.InsightServiceGetResponse, error)
-	// Create submits a compact candidate insight after a thread discovers a
-	// durable answer. This is not a note-for-later or transcript store; include
-	// the situation, answer, action, optional example, and useful links.
+	// Submit a compact evidence-backed insight after solving something reusable;
+	// avoid transcripts or notes.
 	Create(context.Context, *v1.InsightServiceCreateRequest) (*v1.InsightServiceCreateResponse, error)
 	// Update amends an existing local insight when it needs clearer wording,
-	// fresher links, corrected context, or revised guidance.
+	// fresher links, corrected tags, or revised guidance.
 	Update(context.Context, *v1.InsightServiceUpdateRequest) (*v1.InsightServiceUpdateResponse, error)
-	// RecordOutcome records whether an insight worked after it was applied.
-	// Use did_not_work only when the insight appeared to match the problem and
-	// the suggested action was tried but failed, not when the result was merely
-	// irrelevant to the search.
+	// Record solved/helped/did_not_work/stale/incorrect after applying an insight.
+	// did_not_work means tried and failed; ignore irrelevant search results.
 	RecordOutcome(context.Context, *v1.InsightServiceRecordOutcomeRequest) (*v1.InsightServiceRecordOutcomeResponse, error)
 }
 
@@ -169,24 +164,19 @@ func (c *insightServiceClient) RecordOutcome(ctx context.Context, req *v1.Insigh
 
 // InsightServiceHandler is an implementation of the consensus.v1.InsightService service.
 type InsightServiceHandler interface {
-	// Search returns ranked insights for a concrete problem, exact error, failing
-	// command, stack trace, snippet, or repo/tool context. Use it as a one-shot
-	// retrieval tool before rediscovering a known issue; follow returned links or
-	// fetch a matching insight when useful.
+	// Find prior insights for a concrete problem, error, command, stack trace,
+	// snippet, or repo/tool detail.
 	Search(context.Context, *v1.InsightServiceSearchRequest) (*v1.InsightServiceSearchResponse, error)
-	// Get returns one insight by local ID or federated reference.
+	// Fetch one insight by ID or consensus URI.
 	Get(context.Context, *v1.InsightServiceGetRequest) (*v1.InsightServiceGetResponse, error)
-	// Create submits a compact candidate insight after a thread discovers a
-	// durable answer. This is not a note-for-later or transcript store; include
-	// the situation, answer, action, optional example, and useful links.
+	// Submit a compact evidence-backed insight after solving something reusable;
+	// avoid transcripts or notes.
 	Create(context.Context, *v1.InsightServiceCreateRequest) (*v1.InsightServiceCreateResponse, error)
 	// Update amends an existing local insight when it needs clearer wording,
-	// fresher links, corrected context, or revised guidance.
+	// fresher links, corrected tags, or revised guidance.
 	Update(context.Context, *v1.InsightServiceUpdateRequest) (*v1.InsightServiceUpdateResponse, error)
-	// RecordOutcome records whether an insight worked after it was applied.
-	// Use did_not_work only when the insight appeared to match the problem and
-	// the suggested action was tried but failed, not when the result was merely
-	// irrelevant to the search.
+	// Record solved/helped/did_not_work/stale/incorrect after applying an insight.
+	// did_not_work means tried and failed; ignore irrelevant search results.
 	RecordOutcome(context.Context, *v1.InsightServiceRecordOutcomeRequest) (*v1.InsightServiceRecordOutcomeResponse, error)
 }
 

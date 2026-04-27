@@ -19,8 +19,9 @@ import (
 func TestServer_ConnectInsightFlow(t *testing.T) {
 	ctx := context.Background()
 	db := postgrestest.New(ctx, t)
+	svc := consensus.NewService(db.Client)
 
-	handler, err := server.NewAPI(server.Config{Service: consensus.NewService(db.Client)})
+	handler, err := server.NewAPI(server.Config{Service: svc})
 	require.NoError(t, err)
 
 	httpServer := httptest.NewServer(handler)
@@ -33,17 +34,13 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 		Problem: "A source map upload fails when the same commit is uploaded twice.",
 		Answer:  "Source map uploads can fail when the same commit is uploaded twice.",
 		Example: &consensusv1.InsightExample{
-			Kind:        "command",
 			Command:     "posthog sourcemaps upload",
 			Description: "Duplicate commit upload path.",
 		},
-		Detail:  "The upload path should handle duplicate commit attempts explicitly.",
-		Action:  "Check existing uploads before retrying the same commit.",
-		Kind:    "pitfall",
-		Tags:    []string{"posthog", "source-maps", "build"},
-		Context: map[string]string{"tool": "turbo"},
+		Detail: "The upload path should handle duplicate commit attempts explicitly.",
+		Action: "Check existing uploads before retrying the same commit.",
+		Tags:   []string{"posthog", "source-maps", "build", "tool:turbo"},
 		Links: []*consensusv1.InsightLink{{
-			Kind:        "docs",
 			Title:       "PostHog source maps",
 			Uri:         "https://posthog.com/docs/error-tracking/upload-source-maps",
 			Description: "Source map upload behavior.",
@@ -58,7 +55,6 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 		Answer:  "Remove stale generated artifacts before publishing build output.",
 		Detail:  "This is unrelated to PostHog upload idempotency and does not mention the upload command.",
 		Action:  "Clean the build directory and rerun the artifact packaging step.",
-		Kind:    "runbook",
 		Tags:    []string{"build", "source-maps"},
 	})
 	require.NoError(t, err)
@@ -93,19 +89,19 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 	require.Empty(t, search.GetResults())
 
 	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
-		Query:   "source maps duplicate commit",
-		Context: map[string]string{"tool": "turbo"},
-		Limit:   5,
+		Query: "source maps duplicate commit",
+		Tags:  []string{"tool:turbo"},
+		Limit: 5,
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, search.GetResults())
 	require.Equal(t, created.GetInsight().GetId(), search.GetResults()[0].GetInsight().GetId())
-	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "context")
+	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "tag")
 
 	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
-		Query:   "source maps duplicate commit",
-		Context: map[string]string{"tool": "vite"},
-		Limit:   5,
+		Query: "source maps duplicate commit",
+		Tags:  []string{"tool:vite"},
+		Limit: 5,
 	})
 	require.NoError(t, err)
 	require.Empty(t, search.GetResults())
@@ -138,4 +134,10 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, outcome.GetOutcomeId())
+
+	stats, err := svc.VoteStatsForInsights(ctx, []*consensusv1.Insight{created.GetInsight()})
+	require.NoError(t, err)
+	require.Equal(t, 1, stats[created.GetInsight().GetId()].Up)
+	require.Equal(t, 1, stats[created.GetInsight().GetId()].Total)
+	require.Equal(t, 1, stats[created.GetInsight().GetId()].Rank())
 }

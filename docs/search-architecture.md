@@ -50,7 +50,7 @@ the storage and ranking layer with Postgres-native extensions and Go services.
 `pg_textsearch` BM25 ranking when the service runs against a Postgres image with
 the extension preloaded. Insight create and update paths synchronously refresh a
 single `main` search chunk built from title, problem, answer, action, detail,
-example, tags, context, and links. Search runs raw SQL over
+example, tags, and links. Search runs raw SQL over
 `insight_search_chunks`, collapses chunk results back to insights, returns BM25
 matched signals, and applies a bounded vote quality multiplier.
 
@@ -70,7 +70,7 @@ results by `updated_at`. The remaining limitations are:
 The existing data model already has useful primitives:
 
 - `insights` store title, problem, answer, detail, action, examples, tags,
-  context, links, review state, lifecycle state, and freshness.
+  links, review state, lifecycle state, and freshness.
 - `votes` store outcomes such as `solved`, `helped`, `did_not_work`, `stale`,
   and `incorrect`.
 - `problem_fingerprints` store exact-ish matching fields such as error hashes,
@@ -92,7 +92,7 @@ The recommended production path is:
 | Large-scale vector option | `pgvectorscale` | Optional later upgrade for StreamingDiskANN if HNSW memory or latency becomes limiting. |
 | Fallback lexical search | Postgres `tsvector` + GIN + `websearch_to_tsquery` | Works without third-party search extensions and is much better than substring matching. |
 | Fuzzy matching | Postgres `pg_trgm` | Useful for typo tolerance and partial identifier matching. |
-| Fusion | Reciprocal Rank Fusion in SQL | Combines BM25, vector, exact, context, graph, and outcome rankings without normalizing incompatible score scales. |
+| Fusion | Reciprocal Rank Fusion in SQL | Combines BM25, vector, exact tags/fingerprints, graph, and outcome rankings without normalizing incompatible score scales. |
 | Optional reranking | Cross-encoder or small LLM over top chunks | Improves quality for ambiguous queries while bounding latency and token cost. |
 
 `pg_textsearch` should be the preferred BM25 option for the default
@@ -205,7 +205,7 @@ Start with `pgvector` HNSW. Consider `pgvectorscale` and `diskann` later if
 the corpus reaches a size where HNSW memory, build time, or latency becomes a
 material issue.
 
-### Tenant, Lifecycle, and Context
+### Tenant, Lifecycle, and Tags
 
 Search should always be tenant scoped. Lifecycle and review filters should be
 cheap:
@@ -218,10 +218,11 @@ CREATE INDEX insight_chunks_scope_idx
 ON insight_search_chunks (tenant_key, insight_id);
 ```
 
-Tags and structured context are currently JSON. For early versions, JSONB
-filters are acceptable. If tag/context filtering becomes central to ranking,
-normalize them into side tables so they can participate in fast joins and
-statistics.
+Tags are currently JSON. For early versions, JSONB filters are acceptable. If
+tag filtering becomes central to ranking, normalize tags into a side table so
+they can participate in fast joins and statistics. Use scoped tags such as
+`repo:github.com/org/repo`, `file:internal/foo.go`, or `tool:turbo` for
+key-value facts.
 
 ## Query Pipeline
 
@@ -231,8 +232,7 @@ The default search pipeline should be:
 2. Build lexical candidates.
 3. Build semantic candidates if an embedder is configured and chunk embeddings
    are available.
-4. Build exact/context candidates from tags, context, problem fingerprints, and
-   exact strings.
+4. Build exact candidates from tags, problem fingerprints, and exact strings.
 5. Build outcome/value candidates from aggregated vote statistics.
 6. Fuse candidates with reciprocal rank fusion.
 7. Apply lifecycle, review, tenant, permission, and deduplication rules.
@@ -246,7 +246,7 @@ The service should over-fetch internally and return a small final result set:
 | --- | ---: |
 | BM25 lexical | 30 |
 | Vector semantic | 30 |
-| Exact/context/fingerprint | 20 |
+| Exact tag/fingerprint | 20 |
 | Outcome/value prior | 100 |
 | Rerank candidates | 30-50 |
 | Default returned results | 5-10 |
@@ -273,7 +273,7 @@ Use `k = 60` as the starting point. Initial weights:
 | Expanded lexical query | 1.0 |
 | Expanded vector query | 1.0 |
 | Exact fingerprint match | 3.0 |
-| Tag/context match | 1.0 |
+| Tag match | 1.0 |
 | Vote/value prior | 0.5 |
 | Freshness prior | 0.25 |
 
@@ -309,7 +309,7 @@ old high-vote artifact from permanently owning broad queries.
 
 ## Freshness and Lifecycle
 
-Freshness should depend on the kind of insight:
+Freshness should depend on how time-sensitive the insight is:
 
 - Pitfalls, commands, version-specific bugs, API behavior, and deployment
   runbooks decay faster.
@@ -437,7 +437,6 @@ Every returned result should include a compact explanation. Examples:
 - `exact_error_hash`
 - `command`
 - `tag`
-- `context`
 - `outcome`
 - `freshness`
 - `graph`
@@ -527,7 +526,7 @@ Track at least:
 - Which embedding model should be the default for local and hosted deployments?
 - Should chunk embeddings use only answer-shaped fields, or include evidence
   excerpts and examples by default?
-- Should tags/context remain JSONB, or move to normalized tables before search
+- Should tags remain JSONB, or move to a normalized table before search
   tuning begins?
 - What is the minimum result quality threshold for returning no result?
 - Should upstream/federated results participate in the same RRF query, or be

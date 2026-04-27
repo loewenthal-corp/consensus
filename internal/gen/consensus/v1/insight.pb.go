@@ -23,9 +23,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Insight is the durable answer-shaped artifact Consensus stores. It should be
-// compact enough for an agent to read into context and structured enough for
-// retrieval, review, linking, and outcome-based ranking.
+// Insight is the durable answer-shaped artifact Consensus stores.
 type Insight struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Stable local UUID for this insight.
@@ -42,29 +40,23 @@ type Insight struct {
 	Action string `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
 	// Longer explanation with constraints, caveats, or reasoning.
 	Detail string `protobuf:"bytes,7,opt,name=detail,proto3" json:"detail,omitempty"`
-	// Category such as pitfall, workaround, runbook, root_cause, policy, or fix.
-	Kind string `protobuf:"bytes,8,opt,name=kind,proto3" json:"kind,omitempty"`
-	// Optional retrieval tags for technologies, products, tools, services, or concepts.
-	Tags []string `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`
-	// Structured context for matching and filtering, for example language=go,
-	// framework=nextjs, repo_area=admin-ui, service=posthog, or platform=kubernetes.
-	Context map[string]string `protobuf:"bytes,10,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Useful links: docs, source threads, related insights, issues, traces, test
-	// proof, or relationship links. Links can carry graph-like relation semantics
-	// without exposing graph operations through the default MCP surface.
-	Links []*InsightLink `protobuf:"bytes,11,rep,name=links,proto3" json:"links,omitempty"`
+	// Optional retrieval tags. Tags may be bare, such as postgres, or scoped,
+	// such as repo:github.com/org/repo, file:path/to/file.go, or service:posthog.
+	Tags []string `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Useful docs, source threads, related insights, issues, traces, or test proof.
+	Links []*InsightLink `protobuf:"bytes,9,rep,name=links,proto3" json:"links,omitempty"`
 	// Moderation/review state such as approved, pending, disputed, or rejected.
-	ReviewState string `protobuf:"bytes,12,opt,name=review_state,json=reviewState,proto3" json:"review_state,omitempty"`
+	ReviewState string `protobuf:"bytes,10,opt,name=review_state,json=reviewState,proto3" json:"review_state,omitempty"`
 	// Lifecycle state such as active, stale, superseded, archived, or deleted.
-	LifecycleState string `protobuf:"bytes,13,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
+	LifecycleState string `protobuf:"bytes,11,opt,name=lifecycle_state,json=lifecycleState,proto3" json:"lifecycle_state,omitempty"`
 	// Creation timestamp assigned by the server.
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Last update timestamp assigned by the server.
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Last time a solved/helpful outcome or review process confirmed this insight.
-	LastConfirmedAt *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=last_confirmed_at,json=lastConfirmedAt,proto3" json:"last_confirmed_at,omitempty"`
+	LastConfirmedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=last_confirmed_at,json=lastConfirmedAt,proto3" json:"last_confirmed_at,omitempty"`
 	// Origin is empty for local insights and populated for federated results.
-	Origin        *InsightOrigin `protobuf:"bytes,17,opt,name=origin,proto3" json:"origin,omitempty"`
+	Origin        *InsightOrigin `protobuf:"bytes,15,opt,name=origin,proto3" json:"origin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,23 +140,9 @@ func (x *Insight) GetDetail() string {
 	return ""
 }
 
-func (x *Insight) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
 func (x *Insight) GetTags() []string {
 	if x != nil {
 		return x.Tags
-	}
-	return nil
-}
-
-func (x *Insight) GetContext() map[string]string {
-	if x != nil {
-		return x.Context
 	}
 	return nil
 }
@@ -222,16 +200,14 @@ func (x *Insight) GetOrigin() *InsightOrigin {
 // exact error, or other concrete example that helps match the insight later.
 type InsightExample struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Example type such as code, command, config, error, log, or trace.
-	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	// Optional language or format, such as go, typescript, yaml, bash, or text.
-	Language string `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	Language string `protobuf:"bytes,1,opt,name=language,proto3" json:"language,omitempty"`
 	// Example content. Keep this small and directly relevant.
-	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Content string `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	// Optional command associated with the example.
-	Command string `protobuf:"bytes,4,opt,name=command,proto3" json:"command,omitempty"`
+	Command string `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`
 	// Short note describing what the example demonstrates.
-	Description   string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	Description   string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -266,13 +242,6 @@ func (*InsightExample) Descriptor() ([]byte, []int) {
 	return file_consensus_v1_insight_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *InsightExample) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
 func (x *InsightExample) GetLanguage() string {
 	if x != nil {
 		return x.Language
@@ -305,20 +274,17 @@ func (x *InsightExample) GetDescription() string {
 // an insight.
 type InsightLink struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Link type such as docs, related_insight, issue, pull_request, source_thread,
-	// evidence, test, trace, log, or ticket.
-	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	// Optional URI for a source document, issue, thread, trace, file, or resource.
-	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	// Short label for the link.
-	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// What this link helps verify or understand.
-	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// Optional relationship when the link connects to another insight or issue,
 	// such as related, same_root_cause, supersedes, requires, or contradicts.
-	Relation string `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Relation string `protobuf:"bytes,4,opt,name=relation,proto3" json:"relation,omitempty"`
 	// Small relevant excerpt. Avoid storing whole conversations or large logs.
-	Excerpt       string `protobuf:"bytes,6,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
+	Excerpt       string `protobuf:"bytes,5,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,13 +317,6 @@ func (x *InsightLink) ProtoReflect() protoreflect.Message {
 // Deprecated: Use InsightLink.ProtoReflect.Descriptor instead.
 func (*InsightLink) Descriptor() ([]byte, []int) {
 	return file_consensus_v1_insight_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *InsightLink) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
 }
 
 func (x *InsightLink) GetUri() string {
@@ -468,24 +427,20 @@ func (x *InsightOrigin) GetUri() string {
 	return ""
 }
 
-// InsightServiceSearchRequest asks Consensus for previously proven context that
-// may apply to the current problem.
+// InsightServiceSearchRequest asks Consensus for prior insights that may apply.
 type InsightServiceSearchRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Natural-language problem statement, exact error text, stack trace, failing
 	// command, snippet, or task description. This is required and should include
 	// the most specific symptom available.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	// Optional retrieval tags to narrow results to a stack, tool, service, repo,
-	// or environment.
+	// Optional retrieval tags. Tags may be bare, such as postgres, or scoped,
+	// such as repo:github.com/org/repo, file:path/to/file.go, or service:posthog.
 	Tags []string `protobuf:"bytes,2,rep,name=tags,proto3" json:"tags,omitempty"`
-	// Optional structured context for matching and filtering, such as language,
-	// framework, version, platform, repo area, service, or deployment target.
-	Context map[string]string `protobuf:"bytes,3,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Maximum number of results. The server chooses a practical default when zero.
-	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	// Whether the server may include configured read-through upstream instances.
-	IncludeUpstreams bool `protobuf:"varint,5,opt,name=include_upstreams,json=includeUpstreams,proto3" json:"include_upstreams,omitempty"`
+	IncludeUpstreams bool `protobuf:"varint,4,opt,name=include_upstreams,json=includeUpstreams,proto3" json:"include_upstreams,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -530,13 +485,6 @@ func (x *InsightServiceSearchRequest) GetQuery() string {
 func (x *InsightServiceSearchRequest) GetTags() []string {
 	if x != nil {
 		return x.Tags
-	}
-	return nil
-}
-
-func (x *InsightServiceSearchRequest) GetContext() map[string]string {
-	if x != nil {
-		return x.Context
 	}
 	return nil
 }
@@ -610,7 +558,7 @@ type InsightSearchResult struct {
 	Score float64 `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
 	// Short explanation of why this insight ranked where it did.
 	RankReason string `protobuf:"bytes,3,opt,name=rank_reason,json=rankReason,proto3" json:"rank_reason,omitempty"`
-	// Signals that matched, such as text, tag, context, outcome, relation, or vector.
+	// Signals that matched, such as text, tag, outcome, relation, or vector.
 	MatchedSignals []string `protobuf:"bytes,4,rep,name=matched_signals,json=matchedSignals,proto3" json:"matched_signals,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -779,18 +727,15 @@ type InsightServiceCreateRequest struct {
 	Example *InsightExample `protobuf:"bytes,4,opt,name=example,proto3" json:"example,omitempty"`
 	// Concrete action future agents should take when this insight applies.
 	Action string `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"`
-	// Longer explanation of the symptom, context, constraints, or reasoning.
+	// Longer explanation of the symptom, constraints, or reasoning.
 	Detail string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
-	// Category such as pitfall, workaround, runbook, root_cause, policy, or fix.
-	Kind string `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"`
-	// Optional retrieval tags for the stack, tool, service, repo, or error family.
-	Tags []string `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`
-	// Structured context for matching and filtering.
-	Context map[string]string `protobuf:"bytes,9,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Optional retrieval tags. Tags may be bare, such as postgres, or scoped,
+	// such as repo:github.com/org/repo, file:path/to/file.go, or service:posthog.
+	Tags []string `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Useful docs, related insights, source threads, issues, traces, or evidence.
-	Links []*InsightLink `protobuf:"bytes,10,rep,name=links,proto3" json:"links,omitempty"`
+	Links []*InsightLink `protobuf:"bytes,8,rep,name=links,proto3" json:"links,omitempty"`
 	// Optional client-supplied key for deduplicating retries.
-	IdempotencyKey string `protobuf:"bytes,11,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	IdempotencyKey string `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -867,23 +812,9 @@ func (x *InsightServiceCreateRequest) GetDetail() string {
 	return ""
 }
 
-func (x *InsightServiceCreateRequest) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
 func (x *InsightServiceCreateRequest) GetTags() []string {
 	if x != nil {
 		return x.Tags
-	}
-	return nil
-}
-
-func (x *InsightServiceCreateRequest) GetContext() map[string]string {
-	if x != nil {
-		return x.Context
 	}
 	return nil
 }
@@ -957,8 +888,8 @@ func (x *InsightServiceCreateResponse) GetPendingReview() bool {
 }
 
 // InsightServiceUpdateRequest amends an existing local insight. Empty scalar
-// fields are treated as omitted by the first implementation; repeated and map
-// fields replace existing values when present.
+// fields are treated as omitted by the first implementation; repeated fields
+// replace existing values when present.
 type InsightServiceUpdateRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Local insight UUID.
@@ -975,14 +906,10 @@ type InsightServiceUpdateRequest struct {
 	Action string `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
 	// Replacement detail.
 	Detail string `protobuf:"bytes,7,opt,name=detail,proto3" json:"detail,omitempty"`
-	// Replacement kind/category.
-	Kind string `protobuf:"bytes,8,opt,name=kind,proto3" json:"kind,omitempty"`
 	// Replacement tag set.
-	Tags []string `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`
-	// Replacement structured context.
-	Context map[string]string `protobuf:"bytes,10,rep,name=context,proto3" json:"context,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Tags []string `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Replacement link set.
-	Links         []*InsightLink `protobuf:"bytes,11,rep,name=links,proto3" json:"links,omitempty"`
+	Links         []*InsightLink `protobuf:"bytes,9,rep,name=links,proto3" json:"links,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1066,23 +993,9 @@ func (x *InsightServiceUpdateRequest) GetDetail() string {
 	return ""
 }
 
-func (x *InsightServiceUpdateRequest) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
 func (x *InsightServiceUpdateRequest) GetTags() []string {
 	if x != nil {
 		return x.Tags
-	}
-	return nil
-}
-
-func (x *InsightServiceUpdateRequest) GetContext() map[string]string {
-	if x != nil {
-		return x.Context
 	}
 	return nil
 }
@@ -1139,15 +1052,14 @@ func (x *InsightServiceUpdateResponse) GetInsight() *Insight {
 	return nil
 }
 
-// InsightServiceRecordOutcomeRequest records whether an insight worked in a
-// concrete context after the suggested action was applied.
+// InsightServiceRecordOutcomeRequest records whether an insight worked after the
+// suggested action was applied.
 type InsightServiceRecordOutcomeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Local UUID or federated consensus URI for the insight being evaluated.
 	InsightRef string `protobuf:"bytes,1,opt,name=insight_ref,json=insightRef,proto3" json:"insight_ref,omitempty"`
-	// Utility outcome. Expected values include solved, helped, did_not_work,
-	// stale, incorrect, and not_applicable. did_not_work means the insight looked
-	// applicable and was tried, but the suggested action failed.
+	// Utility outcome: solved, helped, did_not_work, stale, or incorrect.
+	// did_not_work means the insight looked applicable and was tried, but failed.
 	Outcome string `protobuf:"bytes,2,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	// Optional confidence from 0.0 to 1.0.
 	Confidence float64 `protobuf:"fixed64,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
@@ -1273,7 +1185,7 @@ var File_consensus_v1_insight_proto protoreflect.FileDescriptor
 
 const file_consensus_v1_insight_proto_rawDesc = "" +
 	"\n" +
-	"\x1aconsensus/v1/insight.proto\x12\fconsensus.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdb\x05\n" +
+	"\x1aconsensus/v1/insight.proto\x12\fconsensus.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcd\x04\n" +
 	"\aInsight\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
@@ -1282,50 +1194,39 @@ const file_consensus_v1_insight_proto_rawDesc = "" +
 	"\aexample\x18\x05 \x01(\v2\x1c.consensus.v1.InsightExampleR\aexample\x12\x16\n" +
 	"\x06action\x18\x06 \x01(\tR\x06action\x12\x16\n" +
 	"\x06detail\x18\a \x01(\tR\x06detail\x12\x12\n" +
-	"\x04kind\x18\b \x01(\tR\x04kind\x12\x12\n" +
-	"\x04tags\x18\t \x03(\tR\x04tags\x12<\n" +
-	"\acontext\x18\n" +
-	" \x03(\v2\".consensus.v1.Insight.ContextEntryR\acontext\x12/\n" +
-	"\x05links\x18\v \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\x12!\n" +
-	"\freview_state\x18\f \x01(\tR\vreviewState\x12'\n" +
-	"\x0flifecycle_state\x18\r \x01(\tR\x0elifecycleState\x129\n" +
+	"\x04tags\x18\b \x03(\tR\x04tags\x12/\n" +
+	"\x05links\x18\t \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\x12!\n" +
+	"\freview_state\x18\n" +
+	" \x01(\tR\vreviewState\x12'\n" +
+	"\x0flifecycle_state\x18\v \x01(\tR\x0elifecycleState\x129\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12F\n" +
-	"\x11last_confirmed_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\x0flastConfirmedAt\x123\n" +
-	"\x06origin\x18\x11 \x01(\v2\x1b.consensus.v1.InsightOriginR\x06origin\x1a:\n" +
-	"\fContextEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x01\n" +
-	"\x0eInsightExample\x12\x1b\n" +
-	"\x04kind\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18dR\x04kind\x12#\n" +
-	"\blanguage\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\blanguage\x12\"\n" +
-	"\acontent\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\acontent\x12\"\n" +
-	"\acommand\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\acommand\x12*\n" +
-	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\"\xdb\x01\n" +
-	"\vInsightLink\x12\x1b\n" +
-	"\x04kind\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18dR\x04kind\x12\x1a\n" +
-	"\x03uri\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x03uri\x12\x1e\n" +
-	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x05title\x12*\n" +
-	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12#\n" +
-	"\brelation\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\brelation\x12\"\n" +
-	"\aexcerpt\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\aexcerpt\"}\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12F\n" +
+	"\x11last_confirmed_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\x0flastConfirmedAt\x123\n" +
+	"\x06origin\x18\x0f \x01(\v2\x1b.consensus.v1.InsightOriginR\x06origin\"\xa9\x01\n" +
+	"\x0eInsightExample\x12#\n" +
+	"\blanguage\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18dR\blanguage\x12\"\n" +
+	"\acontent\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\acontent\x12\"\n" +
+	"\acommand\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\acommand\x12*\n" +
+	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\"\xbe\x01\n" +
+	"\vInsightLink\x12\x1a\n" +
+	"\x03uri\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x03uri\x12\x1e\n" +
+	"\x05title\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x05title\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12#\n" +
+	"\brelation\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\brelation\x12\"\n" +
+	"\aexcerpt\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\aexcerpt\"}\n" +
 	"\rInsightOrigin\x12\x1a\n" +
 	"\binstance\x18\x01 \x01(\tR\binstance\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1b\n" +
 	"\tremote_id\x18\x03 \x01(\tR\bremoteId\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xaf\x02\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xa1\x01\n" +
 	"\x1bInsightServiceSearchRequest\x12 \n" +
 	"\x05query\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xa0\x1fR\x05query\x12\x12\n" +
-	"\x04tags\x18\x02 \x03(\tR\x04tags\x12P\n" +
-	"\acontext\x18\x03 \x03(\v26.consensus.v1.InsightServiceSearchRequest.ContextEntryR\acontext\x12\x1f\n" +
-	"\x05limit\x18\x04 \x01(\x05B\t\xbaH\x06\x1a\x04\x182(\x00R\x05limit\x12+\n" +
-	"\x11include_upstreams\x18\x05 \x01(\bR\x10includeUpstreams\x1a:\n" +
-	"\fContextEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"[\n" +
+	"\x04tags\x18\x02 \x03(\tR\x04tags\x12\x1f\n" +
+	"\x05limit\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x182(\x00R\x05limit\x12+\n" +
+	"\x11include_upstreams\x18\x04 \x01(\bR\x10includeUpstreams\"[\n" +
 	"\x1cInsightServiceSearchResponse\x12;\n" +
 	"\aresults\x18\x01 \x03(\v2!.consensus.v1.InsightSearchResultR\aresults\"\xa6\x01\n" +
 	"\x13InsightSearchResult\x12/\n" +
@@ -1338,7 +1239,7 @@ const file_consensus_v1_insight_proto_rawDesc = "" +
 	"\x03ref\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x03ref\"L\n" +
 	"\x19InsightServiceGetResponse\x12/\n" +
-	"\ainsight\x18\x01 \x01(\v2\x15.consensus.v1.InsightR\ainsight\"\xa6\x04\n" +
+	"\ainsight\x18\x01 \x01(\v2\x15.consensus.v1.InsightR\ainsight\"\xfb\x02\n" +
 	"\x1bInsightServiceCreateRequest\x12 \n" +
 	"\x05title\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x05title\x12\"\n" +
@@ -1347,19 +1248,13 @@ const file_consensus_v1_insight_proto_rawDesc = "" +
 	"\xbaH\ar\x05\x10\x01\x18\xe8\aR\x06answer\x126\n" +
 	"\aexample\x18\x04 \x01(\v2\x1c.consensus.v1.InsightExampleR\aexample\x12 \n" +
 	"\x06action\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x06action\x12 \n" +
-	"\x06detail\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\x06detail\x12\x1b\n" +
-	"\x04kind\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x04kind\x12\x12\n" +
-	"\x04tags\x18\b \x03(\tR\x04tags\x12P\n" +
-	"\acontext\x18\t \x03(\v26.consensus.v1.InsightServiceCreateRequest.ContextEntryR\acontext\x12/\n" +
-	"\x05links\x18\n" +
-	" \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\x121\n" +
-	"\x0fidempotency_key\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x0eidempotencyKey\x1a:\n" +
-	"\fContextEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"v\n" +
+	"\x06detail\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\x06detail\x12\x12\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\x12/\n" +
+	"\x05links\x18\b \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\x121\n" +
+	"\x0fidempotency_key\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x0eidempotencyKey\"v\n" +
 	"\x1cInsightServiceCreateResponse\x12/\n" +
 	"\ainsight\x18\x01 \x01(\v2\x15.consensus.v1.InsightR\ainsight\x12%\n" +
-	"\x0epending_review\x18\x02 \x01(\bR\rpendingReview\"\x89\x04\n" +
+	"\x0epending_review\x18\x02 \x01(\bR\rpendingReview\"\xde\x02\n" +
 	"\x1bInsightServiceUpdateRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1e\n" +
 	"\x05title\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x05title\x12\"\n" +
@@ -1367,15 +1262,9 @@ const file_consensus_v1_insight_proto_rawDesc = "" +
 	"\x06answer\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x06answer\x126\n" +
 	"\aexample\x18\x05 \x01(\v2\x1c.consensus.v1.InsightExampleR\aexample\x12 \n" +
 	"\x06action\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x06action\x12 \n" +
-	"\x06detail\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\x06detail\x12\x1b\n" +
-	"\x04kind\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x04kind\x12\x12\n" +
-	"\x04tags\x18\t \x03(\tR\x04tags\x12P\n" +
-	"\acontext\x18\n" +
-	" \x03(\v26.consensus.v1.InsightServiceUpdateRequest.ContextEntryR\acontext\x12/\n" +
-	"\x05links\x18\v \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\x1a:\n" +
-	"\fContextEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"O\n" +
+	"\x06detail\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe0]R\x06detail\x12\x12\n" +
+	"\x04tags\x18\b \x03(\tR\x04tags\x12/\n" +
+	"\x05links\x18\t \x03(\v2\x19.consensus.v1.InsightLinkR\x05links\"O\n" +
 	"\x1cInsightServiceUpdateResponse\x12/\n" +
 	"\ainsight\x18\x01 \x01(\v2\x15.consensus.v1.InsightR\ainsight\"\xf1\x01\n" +
 	"\"InsightServiceRecordOutcomeRequest\x12+\n" +
@@ -1411,7 +1300,7 @@ func file_consensus_v1_insight_proto_rawDescGZIP() []byte {
 	return file_consensus_v1_insight_proto_rawDescData
 }
 
-var file_consensus_v1_insight_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_consensus_v1_insight_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_consensus_v1_insight_proto_goTypes = []any{
 	(*Insight)(nil),                             // 0: consensus.v1.Insight
 	(*InsightExample)(nil),                      // 1: consensus.v1.InsightExample
@@ -1428,47 +1317,39 @@ var file_consensus_v1_insight_proto_goTypes = []any{
 	(*InsightServiceUpdateResponse)(nil),        // 12: consensus.v1.InsightServiceUpdateResponse
 	(*InsightServiceRecordOutcomeRequest)(nil),  // 13: consensus.v1.InsightServiceRecordOutcomeRequest
 	(*InsightServiceRecordOutcomeResponse)(nil), // 14: consensus.v1.InsightServiceRecordOutcomeResponse
-	nil,                           // 15: consensus.v1.Insight.ContextEntry
-	nil,                           // 16: consensus.v1.InsightServiceSearchRequest.ContextEntry
-	nil,                           // 17: consensus.v1.InsightServiceCreateRequest.ContextEntry
-	nil,                           // 18: consensus.v1.InsightServiceUpdateRequest.ContextEntry
-	(*timestamppb.Timestamp)(nil), // 19: google.protobuf.Timestamp
+	(*timestamppb.Timestamp)(nil),               // 15: google.protobuf.Timestamp
 }
 var file_consensus_v1_insight_proto_depIdxs = []int32{
 	1,  // 0: consensus.v1.Insight.example:type_name -> consensus.v1.InsightExample
-	15, // 1: consensus.v1.Insight.context:type_name -> consensus.v1.Insight.ContextEntry
-	2,  // 2: consensus.v1.Insight.links:type_name -> consensus.v1.InsightLink
-	19, // 3: consensus.v1.Insight.created_at:type_name -> google.protobuf.Timestamp
-	19, // 4: consensus.v1.Insight.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 5: consensus.v1.Insight.last_confirmed_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: consensus.v1.Insight.origin:type_name -> consensus.v1.InsightOrigin
-	16, // 7: consensus.v1.InsightServiceSearchRequest.context:type_name -> consensus.v1.InsightServiceSearchRequest.ContextEntry
-	6,  // 8: consensus.v1.InsightServiceSearchResponse.results:type_name -> consensus.v1.InsightSearchResult
-	0,  // 9: consensus.v1.InsightSearchResult.insight:type_name -> consensus.v1.Insight
-	0,  // 10: consensus.v1.InsightServiceGetResponse.insight:type_name -> consensus.v1.Insight
-	1,  // 11: consensus.v1.InsightServiceCreateRequest.example:type_name -> consensus.v1.InsightExample
-	17, // 12: consensus.v1.InsightServiceCreateRequest.context:type_name -> consensus.v1.InsightServiceCreateRequest.ContextEntry
-	2,  // 13: consensus.v1.InsightServiceCreateRequest.links:type_name -> consensus.v1.InsightLink
-	0,  // 14: consensus.v1.InsightServiceCreateResponse.insight:type_name -> consensus.v1.Insight
-	1,  // 15: consensus.v1.InsightServiceUpdateRequest.example:type_name -> consensus.v1.InsightExample
-	18, // 16: consensus.v1.InsightServiceUpdateRequest.context:type_name -> consensus.v1.InsightServiceUpdateRequest.ContextEntry
-	2,  // 17: consensus.v1.InsightServiceUpdateRequest.links:type_name -> consensus.v1.InsightLink
-	0,  // 18: consensus.v1.InsightServiceUpdateResponse.insight:type_name -> consensus.v1.Insight
-	4,  // 19: consensus.v1.InsightService.Search:input_type -> consensus.v1.InsightServiceSearchRequest
-	7,  // 20: consensus.v1.InsightService.Get:input_type -> consensus.v1.InsightServiceGetRequest
-	9,  // 21: consensus.v1.InsightService.Create:input_type -> consensus.v1.InsightServiceCreateRequest
-	11, // 22: consensus.v1.InsightService.Update:input_type -> consensus.v1.InsightServiceUpdateRequest
-	13, // 23: consensus.v1.InsightService.RecordOutcome:input_type -> consensus.v1.InsightServiceRecordOutcomeRequest
-	5,  // 24: consensus.v1.InsightService.Search:output_type -> consensus.v1.InsightServiceSearchResponse
-	8,  // 25: consensus.v1.InsightService.Get:output_type -> consensus.v1.InsightServiceGetResponse
-	10, // 26: consensus.v1.InsightService.Create:output_type -> consensus.v1.InsightServiceCreateResponse
-	12, // 27: consensus.v1.InsightService.Update:output_type -> consensus.v1.InsightServiceUpdateResponse
-	14, // 28: consensus.v1.InsightService.RecordOutcome:output_type -> consensus.v1.InsightServiceRecordOutcomeResponse
-	24, // [24:29] is the sub-list for method output_type
-	19, // [19:24] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	2,  // 1: consensus.v1.Insight.links:type_name -> consensus.v1.InsightLink
+	15, // 2: consensus.v1.Insight.created_at:type_name -> google.protobuf.Timestamp
+	15, // 3: consensus.v1.Insight.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 4: consensus.v1.Insight.last_confirmed_at:type_name -> google.protobuf.Timestamp
+	3,  // 5: consensus.v1.Insight.origin:type_name -> consensus.v1.InsightOrigin
+	6,  // 6: consensus.v1.InsightServiceSearchResponse.results:type_name -> consensus.v1.InsightSearchResult
+	0,  // 7: consensus.v1.InsightSearchResult.insight:type_name -> consensus.v1.Insight
+	0,  // 8: consensus.v1.InsightServiceGetResponse.insight:type_name -> consensus.v1.Insight
+	1,  // 9: consensus.v1.InsightServiceCreateRequest.example:type_name -> consensus.v1.InsightExample
+	2,  // 10: consensus.v1.InsightServiceCreateRequest.links:type_name -> consensus.v1.InsightLink
+	0,  // 11: consensus.v1.InsightServiceCreateResponse.insight:type_name -> consensus.v1.Insight
+	1,  // 12: consensus.v1.InsightServiceUpdateRequest.example:type_name -> consensus.v1.InsightExample
+	2,  // 13: consensus.v1.InsightServiceUpdateRequest.links:type_name -> consensus.v1.InsightLink
+	0,  // 14: consensus.v1.InsightServiceUpdateResponse.insight:type_name -> consensus.v1.Insight
+	4,  // 15: consensus.v1.InsightService.Search:input_type -> consensus.v1.InsightServiceSearchRequest
+	7,  // 16: consensus.v1.InsightService.Get:input_type -> consensus.v1.InsightServiceGetRequest
+	9,  // 17: consensus.v1.InsightService.Create:input_type -> consensus.v1.InsightServiceCreateRequest
+	11, // 18: consensus.v1.InsightService.Update:input_type -> consensus.v1.InsightServiceUpdateRequest
+	13, // 19: consensus.v1.InsightService.RecordOutcome:input_type -> consensus.v1.InsightServiceRecordOutcomeRequest
+	5,  // 20: consensus.v1.InsightService.Search:output_type -> consensus.v1.InsightServiceSearchResponse
+	8,  // 21: consensus.v1.InsightService.Get:output_type -> consensus.v1.InsightServiceGetResponse
+	10, // 22: consensus.v1.InsightService.Create:output_type -> consensus.v1.InsightServiceCreateResponse
+	12, // 23: consensus.v1.InsightService.Update:output_type -> consensus.v1.InsightServiceUpdateResponse
+	14, // 24: consensus.v1.InsightService.RecordOutcome:output_type -> consensus.v1.InsightServiceRecordOutcomeResponse
+	20, // [20:25] is the sub-list for method output_type
+	15, // [15:20] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_consensus_v1_insight_proto_init() }
@@ -1482,7 +1363,7 @@ func file_consensus_v1_insight_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_consensus_v1_insight_proto_rawDesc), len(file_consensus_v1_insight_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2275,10 +2275,8 @@ type InsightMutation struct {
 	example             *map[string]string
 	detail              *string
 	action              *string
-	kind                *string
 	tags                *[]string
 	appendtags          []string
-	context             *map[string]string
 	links               *[]map[string]string
 	appendlinks         []map[string]string
 	created_by_actor_id *uuid.UUID
@@ -2703,42 +2701,6 @@ func (m *InsightMutation) ResetAction() {
 	delete(m.clearedFields, insight.FieldAction)
 }
 
-// SetKind sets the "kind" field.
-func (m *InsightMutation) SetKind(s string) {
-	m.kind = &s
-}
-
-// Kind returns the value of the "kind" field in the mutation.
-func (m *InsightMutation) Kind() (r string, exists bool) {
-	v := m.kind
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldKind returns the old "kind" field's value of the Insight entity.
-// If the Insight object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *InsightMutation) OldKind(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldKind is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldKind requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldKind: %w", err)
-	}
-	return oldValue.Kind, nil
-}
-
-// ResetKind resets all changes to the "kind" field.
-func (m *InsightMutation) ResetKind() {
-	m.kind = nil
-}
-
 // SetTags sets the "tags" field.
 func (m *InsightMutation) SetTags(s []string) {
 	m.tags = &s
@@ -2802,55 +2764,6 @@ func (m *InsightMutation) ResetTags() {
 	m.tags = nil
 	m.appendtags = nil
 	delete(m.clearedFields, insight.FieldTags)
-}
-
-// SetContext sets the "context" field.
-func (m *InsightMutation) SetContext(value map[string]string) {
-	m.context = &value
-}
-
-// Context returns the value of the "context" field in the mutation.
-func (m *InsightMutation) Context() (r map[string]string, exists bool) {
-	v := m.context
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldContext returns the old "context" field's value of the Insight entity.
-// If the Insight object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *InsightMutation) OldContext(ctx context.Context) (v map[string]string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldContext is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldContext requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldContext: %w", err)
-	}
-	return oldValue.Context, nil
-}
-
-// ClearContext clears the value of the "context" field.
-func (m *InsightMutation) ClearContext() {
-	m.context = nil
-	m.clearedFields[insight.FieldContext] = struct{}{}
-}
-
-// ContextCleared returns if the "context" field was cleared in this mutation.
-func (m *InsightMutation) ContextCleared() bool {
-	_, ok := m.clearedFields[insight.FieldContext]
-	return ok
-}
-
-// ResetContext resets all changes to the "context" field.
-func (m *InsightMutation) ResetContext() {
-	m.context = nil
-	delete(m.clearedFields, insight.FieldContext)
 }
 
 // SetLinks sets the "links" field.
@@ -3292,7 +3205,7 @@ func (m *InsightMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *InsightMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 17)
 	if m.tenant_key != nil {
 		fields = append(fields, insight.FieldTenantKey)
 	}
@@ -3314,14 +3227,8 @@ func (m *InsightMutation) Fields() []string {
 	if m.action != nil {
 		fields = append(fields, insight.FieldAction)
 	}
-	if m.kind != nil {
-		fields = append(fields, insight.FieldKind)
-	}
 	if m.tags != nil {
 		fields = append(fields, insight.FieldTags)
-	}
-	if m.context != nil {
-		fields = append(fields, insight.FieldContext)
 	}
 	if m.links != nil {
 		fields = append(fields, insight.FieldLinks)
@@ -3372,12 +3279,8 @@ func (m *InsightMutation) Field(name string) (ent.Value, bool) {
 		return m.Detail()
 	case insight.FieldAction:
 		return m.Action()
-	case insight.FieldKind:
-		return m.Kind()
 	case insight.FieldTags:
 		return m.Tags()
-	case insight.FieldContext:
-		return m.Context()
 	case insight.FieldLinks:
 		return m.Links()
 	case insight.FieldCreatedByActorID:
@@ -3419,12 +3322,8 @@ func (m *InsightMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldDetail(ctx)
 	case insight.FieldAction:
 		return m.OldAction(ctx)
-	case insight.FieldKind:
-		return m.OldKind(ctx)
 	case insight.FieldTags:
 		return m.OldTags(ctx)
-	case insight.FieldContext:
-		return m.OldContext(ctx)
 	case insight.FieldLinks:
 		return m.OldLinks(ctx)
 	case insight.FieldCreatedByActorID:
@@ -3501,26 +3400,12 @@ func (m *InsightMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAction(v)
 		return nil
-	case insight.FieldKind:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetKind(v)
-		return nil
 	case insight.FieldTags:
 		v, ok := value.([]string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTags(v)
-		return nil
-	case insight.FieldContext:
-		v, ok := value.(map[string]string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetContext(v)
 		return nil
 	case insight.FieldLinks:
 		v, ok := value.([]map[string]string)
@@ -3630,9 +3515,6 @@ func (m *InsightMutation) ClearedFields() []string {
 	if m.FieldCleared(insight.FieldTags) {
 		fields = append(fields, insight.FieldTags)
 	}
-	if m.FieldCleared(insight.FieldContext) {
-		fields = append(fields, insight.FieldContext)
-	}
 	if m.FieldCleared(insight.FieldLinks) {
 		fields = append(fields, insight.FieldLinks)
 	}
@@ -3676,9 +3558,6 @@ func (m *InsightMutation) ClearField(name string) error {
 		return nil
 	case insight.FieldTags:
 		m.ClearTags()
-		return nil
-	case insight.FieldContext:
-		m.ClearContext()
 		return nil
 	case insight.FieldLinks:
 		m.ClearLinks()
@@ -3724,14 +3603,8 @@ func (m *InsightMutation) ResetField(name string) error {
 	case insight.FieldAction:
 		m.ResetAction()
 		return nil
-	case insight.FieldKind:
-		m.ResetKind()
-		return nil
 	case insight.FieldTags:
 		m.ResetTags()
-		return nil
-	case insight.FieldContext:
-		m.ResetContext()
 		return nil
 	case insight.FieldLinks:
 		m.ResetLinks()

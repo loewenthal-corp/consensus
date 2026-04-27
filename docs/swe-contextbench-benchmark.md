@@ -158,13 +158,25 @@ An insight should be shaped like this:
 - `answer`: one or two sentence durable lesson from the source fix.
 - `action`: concrete future step an agent should try.
 - `detail`: changed files, relevant behavior, caveats, and patch rationale.
-- `tags`: repo, language, framework/library, issue family, changed files.
-- `context`: `repo`, `source_instance_id`, `source_pr`, `source_issue`,
-  `seed_tier`, and any known language/version.
+- `tags`: repo, language, framework/library, issue family, changed files, and
+  scoped facts such as `repo:...`, `source_instance_id:...`, `source_pr:...`,
+  `source_issue:...`, and `seed_tier:agent-source-summary`.
 - `links`: source issue, source PR, related target edge, evidence excerpt.
 
 Do not store whole conversations by default. The benchmark should test compact
 experience reuse, not long transcript stuffing.
+
+In the local harness, the working seed tier is `agent-source-summary`: a Codex
+job reads cached source issue/PR/diff material and writes one Consensus insight
+per related source task. The generated JSON files are then assembled into:
+
+```text
+benchmarks/swe-contextbench/.data/seed/lite.agent-source-summary.insights.jsonl
+```
+
+That JSONL is the reusable seed snapshot. Regenerate it only when changing the
+prompt, source material, normalization logic, or model. For normal benchmark
+reruns, reset the benchmark database and load this file directly.
 
 ## Setup
 
@@ -173,21 +185,33 @@ Required local tools:
 - Docker, for the SWE-bench evaluator.
 - Python 3.11+ with the SWE-bench harness installed.
 - Go toolchain for the Consensus server.
-- Postgres, usually through the local Docker Compose stack.
+- TimescaleDB with `pg_textsearch`, because the Postgres search path depends on
+  the BM25 extension bundled in the Timescale image.
 - An MCP-capable coding agent. Codex CLI is the preferred first runner because
   it can use Streamable HTTP MCP with very little custom integration.
 
 Start Consensus locally:
 
 ```sh
-task containers::up
+docker run -d --name consensus-bench-timescale \
+  -e POSTGRES_DB=consensus \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 15432:5432 \
+  timescale/timescaledb-ha:pg17 \
+  postgres -c shared_preload_libraries=timescaledb,pg_textsearch
+
+PORT=18080 MCP_PORT=18081 \
+  DATABASE_URL='postgres://postgres:postgres@localhost:15432/consensus?sslmode=disable' \
+  MIGRATE=true \
+  go run ./cmd/consensus
 ```
 
 Local endpoints:
 
-- Admin: <http://localhost:8080/admin/>
-- MCP: <http://localhost:8081/mcp>
-- Health: <http://localhost:8080/healthz>
+- Admin: <http://localhost:18080/admin/>
+- MCP: <http://localhost:18081/mcp>
+- Health: <http://localhost:18080/healthz>
 
 For Codex CLI, prefer isolated benchmark profiles so the baseline and Consensus
 conditions do not accidentally share user-level MCP configuration.
@@ -200,7 +224,7 @@ Baseline profile:
 
 Consensus profile:
 
-- one MCP server entry pointing at `http://localhost:8081/mcp`
+- one MCP server entry pointing at `http://localhost:18081/mcp`
 - same model as baseline
 - same sandbox and approval settings
 
@@ -209,7 +233,7 @@ Consensus profile:
 Recommended future layout:
 
 ```text
-benchmarks/swe_contextbench/
+benchmarks/swe-contextbench/
   download.py
   prepare_dataset.py
   build_source_insights.py
@@ -227,10 +251,10 @@ Generated benchmark data should live outside source-controlled docs, for
 example:
 
 ```text
-.bench/swe-contextbench/
+benchmarks/swe-contextbench/.data/
   raw/
   prepared/
-  consensus-seed/
+  seed/
   runs/
     lite-baseline/
     lite-consensus-free/
@@ -246,13 +270,13 @@ Preparation should:
 3. Emit a local SWE-bench-compatible dataset JSON:
 
    ```text
-   .bench/swe-contextbench/prepared/lite.targets.json
+   benchmarks/swe-contextbench/.data/prepared/lite.targets.json
    ```
 
 4. Emit the relation graph:
 
    ```text
-   .bench/swe-contextbench/prepared/lite.edges.json
+   benchmarks/swe-contextbench/.data/prepared/lite.edges.json
    ```
 
 5. Validate the counts:
@@ -272,7 +296,7 @@ Run a retrieval-only probe before spending on full agent runs.
 For each target:
 
 1. Search Consensus with the target `problem_statement`.
-2. Include structured context such as `repo`.
+2. Include scoped tags such as `repo:...`.
 3. Record the top-k returned insight source IDs.
 4. Compare those IDs with the CSV `related_instance_id` set for that target.
 
@@ -287,6 +311,22 @@ Report:
 
 If top-5 recall is weak, full agent runs will mostly measure retrieval failure.
 Improve seeding, tags, and ranking before scaling the benchmark.
+
+The current Lite retrieval probe with 72 `agent-source-summary` insights loaded
+from the reusable seed artifact returns:
+
+| Metric | Value |
+| --- | ---: |
+| Target count | 99 |
+| Hit@1 | 0.7576 |
+| Hit@3 | 0.9394 |
+| Hit@5 | 0.9495 |
+| Mean reciprocal rank | 0.8426 |
+| Empty result rate | 0.0000 |
+
+This probe depends on a `repo:...` tag being present in seeded insights. The
+search backend applies tag filters with exact JSON containment, so inconsistent
+repo tags can filter out otherwise relevant BM25 matches.
 
 ## Agent Runs
 
@@ -334,9 +374,9 @@ dataset:
 
 ```sh
 python -m swebench.harness.run_evaluation \
-  --dataset_name .bench/swe-contextbench/prepared/lite.targets.json \
+  --dataset_name benchmarks/swe-contextbench/.data/prepared/lite.targets.json \
   --split test \
-  --predictions_path .bench/swe-contextbench/runs/lite-consensus-free/predictions.jsonl \
+  --predictions_path benchmarks/swe-contextbench/.data/runs/lite-consensus-free/predictions.jsonl \
   --max_workers 4 \
   --run_id lite-consensus-free
 ```

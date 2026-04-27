@@ -85,11 +85,6 @@ func Action(v string) predicate.Insight {
 	return predicate.Insight(sql.FieldEQ(FieldAction, v))
 }
 
-// Kind applies equality check predicate on the "kind" field. It's identical to KindEQ.
-func Kind(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldEQ(FieldKind, v))
-}
-
 // CreatedByActorID applies equality check predicate on the "created_by_actor_id" field. It's identical to CreatedByActorIDEQ.
 func CreatedByActorID(v uuid.UUID) predicate.Insight {
 	return predicate.Insight(sql.FieldEQ(FieldCreatedByActorID, v))
@@ -560,71 +555,6 @@ func ActionContainsFold(v string) predicate.Insight {
 	return predicate.Insight(sql.FieldContainsFold(FieldAction, v))
 }
 
-// KindEQ applies the EQ predicate on the "kind" field.
-func KindEQ(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldEQ(FieldKind, v))
-}
-
-// KindNEQ applies the NEQ predicate on the "kind" field.
-func KindNEQ(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldNEQ(FieldKind, v))
-}
-
-// KindIn applies the In predicate on the "kind" field.
-func KindIn(vs ...string) predicate.Insight {
-	return predicate.Insight(sql.FieldIn(FieldKind, vs...))
-}
-
-// KindNotIn applies the NotIn predicate on the "kind" field.
-func KindNotIn(vs ...string) predicate.Insight {
-	return predicate.Insight(sql.FieldNotIn(FieldKind, vs...))
-}
-
-// KindGT applies the GT predicate on the "kind" field.
-func KindGT(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldGT(FieldKind, v))
-}
-
-// KindGTE applies the GTE predicate on the "kind" field.
-func KindGTE(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldGTE(FieldKind, v))
-}
-
-// KindLT applies the LT predicate on the "kind" field.
-func KindLT(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldLT(FieldKind, v))
-}
-
-// KindLTE applies the LTE predicate on the "kind" field.
-func KindLTE(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldLTE(FieldKind, v))
-}
-
-// KindContains applies the Contains predicate on the "kind" field.
-func KindContains(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldContains(FieldKind, v))
-}
-
-// KindHasPrefix applies the HasPrefix predicate on the "kind" field.
-func KindHasPrefix(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldHasPrefix(FieldKind, v))
-}
-
-// KindHasSuffix applies the HasSuffix predicate on the "kind" field.
-func KindHasSuffix(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldHasSuffix(FieldKind, v))
-}
-
-// KindEqualFold applies the EqualFold predicate on the "kind" field.
-func KindEqualFold(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldEqualFold(FieldKind, v))
-}
-
-// KindContainsFold applies the ContainsFold predicate on the "kind" field.
-func KindContainsFold(v string) predicate.Insight {
-	return predicate.Insight(sql.FieldContainsFold(FieldKind, v))
-}
-
 // TagsIsNil applies the IsNil predicate on the "tags" field.
 func TagsIsNil() predicate.Insight {
 	return predicate.Insight(sql.FieldIsNull(FieldTags))
@@ -633,16 +563,6 @@ func TagsIsNil() predicate.Insight {
 // TagsNotNil applies the NotNil predicate on the "tags" field.
 func TagsNotNil() predicate.Insight {
 	return predicate.Insight(sql.FieldNotNull(FieldTags))
-}
-
-// ContextIsNil applies the IsNil predicate on the "context" field.
-func ContextIsNil() predicate.Insight {
-	return predicate.Insight(sql.FieldIsNull(FieldContext))
-}
-
-// ContextNotNil applies the NotNil predicate on the "context" field.
-func ContextNotNil() predicate.Insight {
-	return predicate.Insight(sql.FieldNotNull(FieldContext))
 }
 
 // LinksIsNil applies the IsNil predicate on the "links" field.

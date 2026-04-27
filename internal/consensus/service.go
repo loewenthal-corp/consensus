@@ -11,7 +11,9 @@ import (
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/postgres"
 	"github.com/loewenthal-corp/consensus/internal/postgres/insight"
+	"github.com/loewenthal-corp/consensus/internal/postgres/vote"
 	"github.com/loewenthal-corp/consensus/internal/search"
+	insighttags "github.com/loewenthal-corp/consensus/internal/tags"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -23,12 +25,11 @@ const (
 )
 
 var validOutcomes = map[string]struct{}{
-	"solved":         {},
-	"helped":         {},
-	"did_not_work":   {},
-	"stale":          {},
-	"incorrect":      {},
-	"not_applicable": {},
+	"solved":       {},
+	"helped":       {},
+	"did_not_work": {},
+	"stale":        {},
+	"incorrect":    {},
 }
 
 type Service struct {
@@ -42,6 +43,18 @@ type InsightListPage struct {
 	Page       int
 	PageSize   int
 	TotalPages int
+}
+
+type InsightVoteStats struct {
+	Up    int
+	Down  int
+	Stale int
+	Other int
+	Total int
+}
+
+func (s InsightVoteStats) Rank() int {
+	return s.Up - s.Down
 }
 
 func NewService(db *postgres.Client) *Service {
@@ -114,6 +127,54 @@ func (s *Service) ListRecentInsightsPage(ctx context.Context, page, pageSize int
 	return out, nil
 }
 
+func (s *Service) VoteStatsForInsights(ctx context.Context, insights []*consensusv1.Insight) (map[string]InsightVoteStats, error) {
+	stats := make(map[string]InsightVoteStats, len(insights))
+	if s.db == nil || len(insights) == 0 {
+		return stats, nil
+	}
+
+	ids := make([]uuid.UUID, 0, len(insights))
+	for _, item := range insights {
+		if item == nil {
+			continue
+		}
+		id, err := uuid.Parse(item.GetId())
+		if err != nil {
+			continue
+		}
+		ids = append(ids, id)
+		stats[id.String()] = InsightVoteStats{}
+	}
+	if len(ids) == 0 {
+		return stats, nil
+	}
+
+	votes, err := s.db.Vote.Query().
+		Where(vote.TenantKey(defaultTenantKey), vote.InsightIDIn(ids...)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("load insight vote stats: %w", err)
+	}
+
+	for _, item := range votes {
+		id := item.InsightID.String()
+		stat := stats[id]
+		stat.Total++
+		switch item.Outcome {
+		case "solved", "helped":
+			stat.Up++
+		case "did_not_work", "incorrect":
+			stat.Down++
+		case "stale":
+			stat.Stale++
+		default:
+			stat.Other++
+		}
+		stats[id] = stat
+	}
+	return stats, nil
+}
+
 func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSearchRequest) (*consensusv1.InsightServiceSearchResponse, error) {
 	rawQuery := strings.TrimSpace(req.GetQuery())
 	if rawQuery == "" {
@@ -128,7 +189,6 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSea
 		TenantKey: defaultTenantKey,
 		Query:     rawQuery,
 		Tags:      req.GetTags(),
-		Context:   req.GetContext(),
 		Limit:     int(req.GetLimit()),
 	})
 	if err != nil {
@@ -197,9 +257,7 @@ func (s *Service) Create(ctx context.Context, req *consensusv1.InsightServiceCre
 		SetExample(insightExampleToJSON(req.GetExample())).
 		SetDetail(req.GetDetail()).
 		SetAction(req.GetAction()).
-		SetKind(defaultString(req.GetKind(), "insight")).
-		SetTags(req.GetTags()).
-		SetContext(req.GetContext()).
+		SetTags(insighttags.NormalizeList(req.GetTags())).
 		SetLinks(insightLinksToJSON(req.GetLinks())).
 		Save(ctx)
 	if err != nil {
@@ -240,14 +298,8 @@ func (s *Service) Update(ctx context.Context, req *consensusv1.InsightServiceUpd
 	if req.GetAction() != "" {
 		update.SetAction(req.GetAction())
 	}
-	if req.GetKind() != "" {
-		update.SetKind(req.GetKind())
-	}
 	if req.GetTags() != nil {
-		update.SetTags(req.GetTags())
-	}
-	if req.GetContext() != nil {
-		update.SetContext(req.GetContext())
+		update.SetTags(insighttags.NormalizeList(req.GetTags()))
 	}
 	if req.GetLinks() != nil {
 		update.SetLinks(insightLinksToJSON(req.GetLinks()))
@@ -330,9 +382,7 @@ func toProtoInsight(item *postgres.Insight) *consensusv1.Insight {
 		Example:        insightExampleFromJSON(item.Example),
 		Detail:         item.Detail,
 		Action:         item.Action,
-		Kind:           item.Kind,
 		Tags:           item.Tags,
-		Context:        item.Context,
 		Links:          insightLinksFromJSON(item.Links),
 		ReviewState:    item.ReviewState,
 		LifecycleState: item.LifecycleState,
@@ -350,7 +400,6 @@ func insightExampleToJSON(example *consensusv1.InsightExample) map[string]string
 		return map[string]string{}
 	}
 	return map[string]string{
-		"kind":        example.GetKind(),
 		"language":    example.GetLanguage(),
 		"content":     example.GetContent(),
 		"command":     example.GetCommand(),
@@ -363,13 +412,12 @@ func insightExampleFromJSON(example map[string]string) *consensusv1.InsightExamp
 		return nil
 	}
 	out := &consensusv1.InsightExample{
-		Kind:        example["kind"],
 		Language:    example["language"],
 		Content:     example["content"],
 		Command:     example["command"],
 		Description: example["description"],
 	}
-	if out.GetKind() == "" && out.GetLanguage() == "" && out.GetContent() == "" && out.GetCommand() == "" && out.GetDescription() == "" {
+	if out.GetLanguage() == "" && out.GetContent() == "" && out.GetCommand() == "" && out.GetDescription() == "" {
 		return nil
 	}
 	return out
@@ -379,7 +427,6 @@ func insightLinksToJSON(links []*consensusv1.InsightLink) []map[string]string {
 	out := make([]map[string]string, 0, len(links))
 	for _, link := range links {
 		out = append(out, map[string]string{
-			"kind":        link.GetKind(),
 			"uri":         link.GetUri(),
 			"title":       link.GetTitle(),
 			"description": link.GetDescription(),
@@ -394,7 +441,6 @@ func insightLinksFromJSON(links []map[string]string) []*consensusv1.InsightLink 
 	out := make([]*consensusv1.InsightLink, 0, len(links))
 	for _, link := range links {
 		out = append(out, &consensusv1.InsightLink{
-			Kind:        link["kind"],
 			Uri:         link["uri"],
 			Title:       link["title"],
 			Description: link["description"],
@@ -403,13 +449,6 @@ func insightLinksFromJSON(links []map[string]string) []*consensusv1.InsightLink 
 		})
 	}
 	return out
-}
-
-func defaultString(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
 }
 
 func nilIfEmpty(value string) *string {

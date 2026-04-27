@@ -25,6 +25,7 @@ import (
 	consensus "github.com/loewenthal-corp/consensus/internal/consensus"
 	consensusv1 "github.com/loewenthal-corp/consensus/internal/gen/consensus/v1"
 	"github.com/loewenthal-corp/consensus/internal/gen/consensus/v1/consensusv1connect"
+	insighttags "github.com/loewenthal-corp/consensus/internal/tags"
 )
 
 type Config struct {
@@ -85,6 +86,9 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 		Version: buildinfo.Version,
 	}, &mcp.ServerOptions{
 		Instructions: mcpInstructions,
+		Capabilities: &mcp.ServerCapabilities{
+			Tools: &mcp.ToolCapabilities{},
+		},
 	})
 	mcpServer := gosdk.Wrap(raw)
 	handler := serviceDispatcher(svc)
@@ -108,17 +112,20 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 	}), nil
 }
 
-const mcpInstructions = `Consensus is a small MCP component for reusing durable insights from prior agent work.
+const mcpInstructions = `Search when prior agent work may help. Get promising matches. After applying an insight, record solved/helped/did_not_work/stale/incorrect. Create compact evidence-backed insights only for reusable discoveries.`
 
-Use it like grep or web search: search when a previous answer might save work; if a result applies, get it or follow its links; after applying it, record the outcome. Create only compact issue/answer/action insights with evidence.
+var mcpToolNames = map[protoreflect.FullName]string{
+	"consensus.v1.InsightService.Search":        "search",
+	"consensus.v1.InsightService.Get":           "get",
+	"consensus.v1.InsightService.Create":        "create",
+	"consensus.v1.InsightService.RecordOutcome": "record_outcome",
+}
 
-Consensus is not a workflow engine and should not run a back-and-forth research loop for the agent. The MCP surface is intentionally tiny: search, get, create, and record_outcome.`
-
-var mcpToolComments = map[protoreflect.FullName]string{
-	"consensus.v1.InsightService.Search":        `Search returns ranked insights for a concrete problem, exact error, failing command, stack trace, snippet, or repo/tool context. Use it as a one-shot retrieval tool before rediscovering a known issue; follow returned links or fetch a matching insight when useful.`,
-	"consensus.v1.InsightService.Get":           `Get returns one insight by local ID or federated reference, including the situation, answer, action, optional example, links, lifecycle state, and review state.`,
-	"consensus.v1.InsightService.Create":        `Create submits a compact candidate insight after a thread discovers a durable answer. This is not a note-for-later or transcript store; include the situation, answer, action, optional example, and useful links.`,
-	"consensus.v1.InsightService.RecordOutcome": `RecordOutcome records whether an insight worked after it was applied. Use did_not_work only when the insight appeared to match the problem and the suggested action was tried but failed, not when the result was merely irrelevant.`,
+var mcpToolFallbackComments = map[protoreflect.FullName]string{
+	"consensus.v1.InsightService.Search":        `Find prior insights for a concrete problem, error, command, stack trace, snippet, or repo/tool detail.`,
+	"consensus.v1.InsightService.Get":           `Fetch one insight by ID or consensus URI.`,
+	"consensus.v1.InsightService.Create":        `Submit a compact evidence-backed insight after solving something reusable; avoid transcripts or notes.`,
+	"consensus.v1.InsightService.RecordOutcome": `Record solved/helped/did_not_work/stale/incorrect after applying an insight. did_not_work means tried and failed; ignore irrelevant search results.`,
 }
 
 var mcpMethodAllowlist = map[protoreflect.FullName]struct{}{
@@ -132,7 +139,14 @@ func mcpToolComment(method protoreflect.MethodDescriptor) string {
 	if location := method.ParentFile().SourceLocations().ByDescriptor(method); strings.TrimSpace(location.LeadingComments) != "" {
 		return location.LeadingComments
 	}
-	return mcpToolComments[method.FullName()]
+	return mcpToolFallbackComments[method.FullName()]
+}
+
+func mcpToolName(method protoreflect.MethodDescriptor) string {
+	if name := mcpToolNames[method.FullName()]; name != "" {
+		return name
+	}
+	return strings.ReplaceAll(string(method.FullName()), ".", "_")
 }
 
 func registerMCPTools(s runtime.MCPServer, sd protoreflect.ServiceDescriptor, handler gen.Handler) int {
@@ -147,6 +161,7 @@ func registerMCPTools(s runtime.MCPServer, sd protoreflect.ServiceDescriptor, ha
 		}
 
 		tool, _ := gen.ToolForMethod(method, mcpToolComment(method))
+		tool.Name = mcpToolName(method)
 		md := method
 		toolName := tool.Name
 		s.AddTool(tool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
@@ -273,6 +288,13 @@ func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 		}
 		if err != nil {
 			data.Error = err.Error()
+		} else {
+			stats, err := svc.VoteStatsForInsights(r.Context(), recent.Insights)
+			if err != nil {
+				data.Error = err.Error()
+			} else {
+				data.RecentItems = adminItemsForInsights(recent.Insights, stats)
+			}
 		}
 		if recent.Page > 1 {
 			data.PreviousPageURL = adminPageURL(r, recent.Page-1)
@@ -283,21 +305,21 @@ func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 
 		if strings.TrimSpace(data.Search.Query) != "" {
 			data.Search.Searched = true
-			contextFilters, err := parseAdminSearchContext(data.Search.Context)
+			resp, err := svc.Search(r.Context(), &consensusv1.InsightServiceSearchRequest{
+				Query:            data.Search.Query,
+				Tags:             parseAdminSearchTags(data.Search.Tags),
+				Limit:            int32(data.Search.Limit),
+				IncludeUpstreams: data.Search.IncludeUpstreams,
+			})
 			if err != nil {
 				data.Search.Error = err.Error()
 			} else {
-				resp, err := svc.Search(r.Context(), &consensusv1.InsightServiceSearchRequest{
-					Query:            data.Search.Query,
-					Tags:             parseAdminSearchTags(data.Search.Tags),
-					Context:          contextFilters,
-					Limit:            int32(data.Search.Limit),
-					IncludeUpstreams: data.Search.IncludeUpstreams,
-				})
+				data.Search.Results = resp.GetResults()
+				stats, err := svc.VoteStatsForInsights(r.Context(), adminInsightsFromResults(resp.GetResults()))
 				if err != nil {
 					data.Search.Error = err.Error()
 				} else {
-					data.Search.Results = resp.GetResults()
+					data.SearchItems = adminItemsForSearchResults(resp.GetResults(), stats)
 				}
 			}
 		}
@@ -311,17 +333,27 @@ func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 
 type adminPageData struct {
 	Recent          *consensus.InsightListPage
+	RecentItems     []adminInsightItem
 	Search          adminSearchData
+	SearchItems     []adminInsightItem
 	PreviousPageURL string
 	NextPageURL     string
 	ClearSearchURL  string
 	Error           string
 }
 
+type adminInsightItem struct {
+	Insight        *consensusv1.Insight
+	Stats          consensus.InsightVoteStats
+	Score          float64
+	RankReason     string
+	MatchedSignals []string
+	HasScore       bool
+}
+
 type adminSearchData struct {
 	Query            string
 	Tags             string
-	Context          string
 	Limit            int
 	IncludeUpstreams bool
 	Searched         bool
@@ -329,12 +361,54 @@ type adminSearchData struct {
 	Error            string
 }
 
+func adminItemsForInsights(insights []*consensusv1.Insight, stats map[string]consensus.InsightVoteStats) []adminInsightItem {
+	items := make([]adminInsightItem, 0, len(insights))
+	for _, insight := range insights {
+		if insight == nil {
+			continue
+		}
+		items = append(items, adminInsightItem{
+			Insight: insight,
+			Stats:   stats[insight.GetId()],
+		})
+	}
+	return items
+}
+
+func adminItemsForSearchResults(results []*consensusv1.InsightSearchResult, stats map[string]consensus.InsightVoteStats) []adminInsightItem {
+	items := make([]adminInsightItem, 0, len(results))
+	for _, result := range results {
+		insight := result.GetInsight()
+		if insight == nil {
+			continue
+		}
+		items = append(items, adminInsightItem{
+			Insight:        insight,
+			Stats:          stats[insight.GetId()],
+			Score:          result.GetScore(),
+			RankReason:     result.GetRankReason(),
+			MatchedSignals: result.GetMatchedSignals(),
+			HasScore:       true,
+		})
+	}
+	return items
+}
+
+func adminInsightsFromResults(results []*consensusv1.InsightSearchResult) []*consensusv1.Insight {
+	insights := make([]*consensusv1.Insight, 0, len(results))
+	for _, result := range results {
+		if insight := result.GetInsight(); insight != nil {
+			insights = append(insights, insight)
+		}
+	}
+	return insights
+}
+
 func adminSearchFromRequest(r *http.Request) adminSearchData {
 	values := r.URL.Query()
 	return adminSearchData{
 		Query:            strings.TrimSpace(values.Get("query")),
 		Tags:             values.Get("tags"),
-		Context:          values.Get("context"),
 		Limit:            parseAdminInt(values.Get("limit"), 10, 0, 50),
 		IncludeUpstreams: parseAdminBool(values.Get("include_upstreams")),
 	}
@@ -368,47 +442,7 @@ func parseAdminBool(raw string) bool {
 }
 
 func parseAdminSearchTags(raw string) []string {
-	parts := strings.FieldsFunc(raw, func(r rune) bool {
-		return r == ',' || r == '\n' || r == '\r'
-	})
-	out := make([]string, 0, len(parts))
-	seen := make(map[string]struct{}, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		if _, ok := seen[part]; ok {
-			continue
-		}
-		seen[part] = struct{}{}
-		out = append(out, part)
-	}
-	return out
-}
-
-func parseAdminSearchContext(raw string) (map[string]string, error) {
-	parts := strings.FieldsFunc(raw, func(r rune) bool {
-		return r == ',' || r == '\n' || r == '\r'
-	})
-	out := make(map[string]string, len(parts))
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		key, value, ok := strings.Cut(part, "=")
-		if !ok {
-			return nil, fmt.Errorf("context filters must use key=value entries")
-		}
-		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-		if key == "" || value == "" {
-			return nil, fmt.Errorf("context filters must use non-empty key=value entries")
-		}
-		out[key] = value
-	}
-	return out, nil
+	return insighttags.Parse(raw)
 }
 
 func adminPageURL(r *http.Request, page int) string {
@@ -422,7 +456,7 @@ func adminPageURL(r *http.Request, page int) string {
 
 func adminClearSearchURL(r *http.Request) string {
 	values := r.URL.Query()
-	for _, key := range []string{"query", "tags", "context", "limit", "include_upstreams", "page"} {
+	for _, key := range []string{"query", "tags", "limit", "include_upstreams", "page"} {
 		values.Del(key)
 	}
 	encoded := values.Encode()
@@ -446,7 +480,115 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
 		}
 		return ts.AsTime().Format("2006-01-02 15:04:05 MST")
 	},
-}).Parse(`<!doctype html>
+	"signedInt": func(value int) string {
+		if value > 0 {
+			return "+" + strconv.Itoa(value)
+		}
+		return strconv.Itoa(value)
+	},
+}).Parse(`{{define "insightCard"}}
+<details class="insight-card">
+  <summary class="insight-summary">
+    <div class="vote-box">
+      <div class="rank">{{signedInt .Stats.Rank}}</div>
+      <div class="rank-label">rank</div>
+      <div class="vote-row">
+        <span>Up {{.Stats.Up}}</span>
+        <span>Down {{.Stats.Down}}</span>
+        {{if .Stats.Stale}}<span>Stale {{.Stats.Stale}}</span>{{end}}
+      </div>
+    </div>
+    <div class="insight-main">
+      <div class="title">{{.Insight.Title}}</div>
+      <div class="summary-line">
+        <span class="state">{{.Insight.ReviewState}} / {{.Insight.LifecycleState}}</span>
+        <span>{{formatTime .Insight.UpdatedAt}}</span>
+      </div>
+    </div>
+    <div class="search-rank">
+      {{if .HasScore}}
+      <div class="score">{{printf "%.6f" .Score}}</div>
+      <div class="meta">search score</div>
+      {{else}}
+      <div class="score">{{.Stats.Total}}</div>
+      <div class="meta">votes</div>
+      {{end}}
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="detail-grid">
+      <div class="detail-section">
+        <div class="detail-label">Answer</div>
+        <div class="detail-text">{{.Insight.Answer}}</div>
+      </div>
+      {{if .Insight.Problem}}
+      <div class="detail-section">
+        <div class="detail-label">Problem</div>
+        <div class="detail-text">{{.Insight.Problem}}</div>
+      </div>
+      {{end}}
+      {{if .Insight.Action}}
+      <div class="detail-section">
+        <div class="detail-label">Action</div>
+        <div class="detail-text">{{.Insight.Action}}</div>
+      </div>
+      {{end}}
+      {{if .Insight.Detail}}
+      <div class="detail-section">
+        <div class="detail-label">Detail</div>
+        <div class="detail-text">{{.Insight.Detail}}</div>
+      </div>
+      {{end}}
+      {{with .Insight.Example}}
+      <div class="detail-section">
+        <div class="detail-label">Example</div>
+        <div class="detail-text">{{if .Language}}{{.Language}}{{end}}{{if .Command}}
+{{.Command}}{{end}}{{if .Description}}
+{{.Description}}{{end}}{{if .Content}}
+{{.Content}}{{end}}</div>
+      </div>
+      {{end}}
+      <div class="detail-section">
+        <div class="detail-label">Votes</div>
+        <div class="detail-text">Up {{.Stats.Up}}, Down {{.Stats.Down}}, Stale {{.Stats.Stale}}, Other {{.Stats.Other}}, Total {{.Stats.Total}}</div>
+      </div>
+      {{if .HasScore}}
+      <div class="detail-section">
+        <div class="detail-label">Ranking</div>
+        <div class="detail-text">{{.RankReason}}</div>
+        <div class="signals">
+          {{range .MatchedSignals}}<span class="signal">{{.}}</span>{{end}}
+        </div>
+      </div>
+      {{end}}
+      {{if .Insight.Tags}}
+      <div class="detail-section">
+        <div class="detail-label">Tags</div>
+        <div class="detail-text">{{join .Insight.Tags ", "}}</div>
+      </div>
+      {{end}}
+      <div class="detail-section">
+        <div class="detail-label">Identity</div>
+        <div class="detail-text">{{.Insight.Id}}
+Created {{formatTime .Insight.CreatedAt}}</div>
+      </div>
+      {{if .Insight.Links}}
+      <div class="detail-section detail-wide">
+        <div class="detail-label">Links</div>
+        <ul class="detail-list">
+          {{range .Insight.Links}}
+          <li class="detail-text">{{if .Title}}<span class="link-title">{{.Title}}</span>{{end}}{{if .Uri}}{{if .Title}} / {{end}}{{.Uri}}{{end}}{{if .Description}}
+{{.Description}}{{end}}{{if .Excerpt}}
+{{.Excerpt}}{{end}}</li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</details>
+{{end}}
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -594,6 +736,129 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       background: transparent;
       color: #283c32;
     }
+    .insight-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .insight-card {
+      border: 1px solid #d8ddd7;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .insight-card[open] {
+      border-color: #b8c5bc;
+    }
+    .insight-summary {
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr) minmax(130px, auto);
+      gap: 14px;
+      align-items: center;
+      list-style: none;
+      padding: 14px 16px;
+    }
+    .insight-summary::-webkit-details-marker {
+      display: none;
+    }
+    .vote-box {
+      border-right: 1px solid #e5e8e2;
+      padding-right: 12px;
+      text-align: center;
+    }
+    .rank {
+      color: #263f32;
+      font-size: 22px;
+      font-weight: 760;
+      line-height: 1;
+    }
+    .rank-label {
+      color: #687479;
+      font-size: 11px;
+      font-weight: 650;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+    .vote-row {
+      color: #4f5a5f;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .insight-main {
+      min-width: 0;
+    }
+    .summary-line {
+      color: #687479;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    .badge {
+      border: 1px solid #cfd6cf;
+      background: #f5f7f3;
+      border-radius: 999px;
+      color: #35443b;
+      display: inline-flex;
+      font-size: 12px;
+      line-height: 1;
+      padding: 5px 7px;
+    }
+    .state {
+      color: #4f5a5f;
+      font-weight: 620;
+    }
+    .search-rank {
+      justify-self: end;
+      text-align: right;
+    }
+    .detail {
+      border-top: 1px solid #e5e8e2;
+      padding: 16px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+    .detail-section {
+      min-width: 0;
+    }
+    .detail-label {
+      color: #687479;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .detail-text {
+      color: #263034;
+      font-size: 14px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+    .detail-wide {
+      grid-column: 1 / -1;
+    }
+    .detail-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .link-title {
+      font-weight: 650;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -688,6 +953,25 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       .search-grid {
         grid-template-columns: 1fr;
       }
+      .insight-summary {
+        grid-template-columns: 1fr;
+      }
+      .vote-box {
+        border-right: 0;
+        border-bottom: 1px solid #e5e8e2;
+        padding: 0 0 12px;
+        text-align: left;
+      }
+      .vote-row {
+        justify-content: flex-start;
+      }
+      .search-rank {
+        justify-self: start;
+        text-align: left;
+      }
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
       .pagination {
         justify-content: flex-start;
       }
@@ -698,6 +982,13 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       table, .empty, .search-panel, .page-link { background: #1b2022; }
       th { background: #242b2e; color: #b4c0c3; }
       .summary, .count, label, .field-label, .meta { color: #b4c0c3; }
+      .insight-card { background: #1b2022; border-color: #30383b; }
+      .insight-card[open] { border-color: #566468; }
+      .vote-box, .detail { border-color: #30383b; }
+      .rank, .detail-text { color: #eef2ef; }
+      .rank-label, .summary-line, .detail-label { color: #b4c0c3; }
+      .badge { background: #242b2e; border-color: #3a4448; color: #d5dddf; }
+      .state { color: #d5dddf; }
       input[type="search"], input[type="text"], input[type="number"] {
         background: #141819;
         border-color: #3a4448;
@@ -723,7 +1014,7 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
     <section class="search-panel" aria-labelledby="search-heading">
       <div class="section-heading">
         <h2 id="search-heading">MCP Search</h2>
-        {{if .Search.Searched}}<div class="count">{{len .Search.Results}} {{insightLabel (len .Search.Results)}}</div>{{end}}
+        {{if .Search.Searched}}<div class="count">{{len .SearchItems}} {{insightLabel (len .SearchItems)}}</div>{{end}}
       </div>
       <form method="get" action="/admin/">
         <input type="hidden" name="page_size" value="{{.Recent.PageSize}}">
@@ -734,11 +1025,7 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
           </div>
           <div class="field">
             <label for="tags">Tags</label>
-            <input id="tags" type="text" name="tags" value="{{.Search.Tags}}" placeholder="posthog, source-maps">
-          </div>
-          <div class="field">
-            <label for="context">Context</label>
-            <input id="context" type="text" name="context" value="{{.Search.Context}}" placeholder="tool=turbo">
+            <input id="tags" type="text" name="tags" value="{{.Search.Tags}}" placeholder="posthog, source-maps, tool:turbo">
           </div>
           <div class="field">
             <label for="limit">Limit</label>
@@ -765,37 +1052,10 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       </div>
       {{if .Search.Error}}
       <div class="error">{{.Search.Error}}</div>
-      {{else if .Search.Results}}
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 37%">Insight</th>
-            <th style="width: 10%">Score</th>
-            <th style="width: 16%">Signals</th>
-            <th style="width: 23%">Rank Reason</th>
-            <th style="width: 14%">Updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{range .Search.Results}}
-          <tr>
-            <td>
-              <div class="title">{{.Insight.Title}}</div>
-              <div class="summary">{{.Insight.Answer}}</div>
-              <div class="meta">{{.Insight.Id}} / {{.Insight.Kind}}</div>
-            </td>
-            <td><span class="score">{{printf "%.6f" .Score}}</span></td>
-            <td>
-              <div class="signals">
-                {{range .MatchedSignals}}<span class="signal">{{.}}</span>{{end}}
-              </div>
-            </td>
-            <td>{{.RankReason}}</td>
-            <td>{{formatTime .Insight.UpdatedAt}}</td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
+      {{else if .SearchItems}}
+      <div class="insight-list">
+        {{range .SearchItems}}{{template "insightCard" .}}{{end}}
+      </div>
       {{else}}
       <div class="empty">No search results.</div>
       {{end}}
@@ -807,32 +1067,10 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
         <h2 id="recent-heading">Recent Insights</h2>
         <div class="count">Page {{.Recent.Page}} of {{.Recent.TotalPages}}</div>
       </div>
-    {{if .Recent.Insights}}
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 40%">Insight</th>
-          <th style="width: 14%">Kind</th>
-          <th style="width: 14%">State</th>
-          <th style="width: 18%">Tags</th>
-          <th style="width: 14%">Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{range .Recent.Insights}}
-        <tr>
-          <td>
-            <div class="title">{{.Title}}</div>
-            <div class="summary">{{.Answer}}</div>
-          </td>
-          <td>{{.Kind}}</td>
-          <td>{{.ReviewState}} / {{.LifecycleState}}</td>
-          <td>{{join .Tags ", "}}</td>
-          <td>{{formatTime .UpdatedAt}}</td>
-        </tr>
-        {{end}}
-      </tbody>
-    </table>
+    {{if .RecentItems}}
+    <div class="insight-list">
+      {{range .RecentItems}}{{template "insightCard" .}}{{end}}
+    </div>
     {{if gt .Recent.TotalPages 1}}
     <nav class="pagination" aria-label="Recent insights pages">
       {{if .PreviousPageURL}}<a class="page-link" href="{{.PreviousPageURL}}">Previous</a>{{else}}<span class="page-disabled">Previous</span>{{end}}

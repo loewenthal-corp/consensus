@@ -122,9 +122,7 @@ var (
 		{Name: "example", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "detail", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "action", Type: field.TypeString, Nullable: true, Size: 2147483647},
-		{Name: "kind", Type: field.TypeString, Size: 100, Default: "insight"},
 		{Name: "tags", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "context", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "links", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "created_by_actor_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "source_run_id", Type: field.TypeString, Nullable: true, Size: 255},
@@ -149,12 +147,12 @@ var (
 			{
 				Name:    "insight_tenant_key_review_state",
 				Unique:  false,
-				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[14]},
+				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[12]},
 			},
 			{
 				Name:    "insight_tenant_key_lifecycle_state",
 				Unique:  false,
-				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[15]},
+				Columns: []*schema.Column{InsightsColumns[1], InsightsColumns[13]},
 			},
 		},
 	}

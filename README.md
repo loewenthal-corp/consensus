@@ -59,9 +59,9 @@ sequenceDiagram
     participant Search as Search/Ranker
     participant Store as Postgres
 
-    Agent->>MCP: search(problem, error, command, context)
+    Agent->>MCP: search(problem, error, command, tags)
     MCP->>Search: retrieve ranked insights
-    Search->>Store: BM25, exact/context, links, outcomes
+    Search->>Store: BM25, exact tags, links, outcomes
     Store-->>Search: candidates
     Search-->>MCP: compact insights + rank reasons + links
     MCP-->>Agent: results
@@ -87,12 +87,12 @@ thread:
 - `action`: what the next agent should do if the insight applies.
 - `example`: optional code, command, config, log, exact error, or version combo.
 - `detail`: caveats, constraints, and reasoning when they matter.
-- `tags` and `context`: stack, service, repo area, language, framework, version,
-  platform, or environment.
+- `tags`: stack, service, repo area, language, framework, version, platform, or
+  environment. Use scoped tags for key-value facts, such as
+  `repo:github.com/org/repo`, `file:internal/foo.go`, or `service:posthog`.
 - `links`: docs, source thread, related insight, issue, PR, ticket, trace, log,
   or test proof.
-- `outcomes`: `solved`, `helped`, `did_not_work`, `stale`, `incorrect`, or
-  `not_applicable`.
+- `outcomes`: `solved`, `helped`, `did_not_work`, `stale`, or `incorrect`.
 
 `did_not_work` has a narrow meaning: the insight appeared to match the problem,
 the suggested action was tried, and the action failed. It does not mean "this
@@ -100,16 +100,14 @@ search result was irrelevant."
 
 ## MCP Surface
 
-Public MCP tool names are derived from Protobuf service and method names, for
-example `consensus_v1_InsightService_Search`. The shorter names below describe
-the conceptual product operations.
+Public MCP tool names are short aliases for allowlisted Protobuf methods.
 
 | Operation | Proto method | Purpose |
 | --- | --- | --- |
-| `insight.search` | `InsightService.Search` | Find ranked insights for a problem, error, command, snippet, or context. |
-| `insight.get` | `InsightService.Get` | Fetch one insight by local ID or federated reference. |
-| `insight.create` | `InsightService.Create` | Submit a compact candidate insight with answer, action, optional example, and links. |
-| `insight.record_outcome` | `InsightService.RecordOutcome` | Record whether an insight worked after being applied. |
+| `search` | `InsightService.Search` | Find ranked insights for a problem, error, command, snippet, or tag. |
+| `get` | `InsightService.Get` | Fetch one insight by local ID or federated reference. |
+| `create` | `InsightService.Create` | Submit a compact candidate insight with answer, action, optional example, and links. |
+| `record_outcome` | `InsightService.RecordOutcome` | Record whether an insight worked after being applied. |
 
 The default MCP surface intentionally excludes admin edits, graph mutation,
 review tools, broad workflow prompts, and federation management. Those belong on
@@ -128,7 +126,7 @@ flowchart LR
 
     MCP --> Services["Insight service"]
     API --> Services
-    Services --> Search["Postgres search<br/>BM25 + exact/context + outcomes"]
+    Services --> Search["Postgres search<br/>BM25 + exact tags + outcomes"]
     Services --> DB[("Postgres<br/>Ent schema")]
 ```
 

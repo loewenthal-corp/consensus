@@ -28,12 +28,8 @@ const (
 	FieldDetail = "detail"
 	// FieldAction holds the string denoting the action field in the database.
 	FieldAction = "action"
-	// FieldKind holds the string denoting the kind field in the database.
-	FieldKind = "kind"
 	// FieldTags holds the string denoting the tags field in the database.
 	FieldTags = "tags"
-	// FieldContext holds the string denoting the context field in the database.
-	FieldContext = "context"
 	// FieldLinks holds the string denoting the links field in the database.
 	FieldLinks = "links"
 	// FieldCreatedByActorID holds the string denoting the created_by_actor_id field in the database.
@@ -66,9 +62,7 @@ var Columns = []string{
 	FieldExample,
 	FieldDetail,
 	FieldAction,
-	FieldKind,
 	FieldTags,
-	FieldContext,
 	FieldLinks,
 	FieldCreatedByActorID,
 	FieldSourceRunID,
@@ -99,10 +93,6 @@ var (
 	TitleValidator func(string) error
 	// AnswerValidator is a validator for the "answer" field. It is called by the builders before save.
 	AnswerValidator func(string) error
-	// DefaultKind holds the default value on creation for the "kind" field.
-	DefaultKind string
-	// KindValidator is a validator for the "kind" field. It is called by the builders before save.
-	KindValidator func(string) error
 	// SourceRunIDValidator is a validator for the "source_run_id" field. It is called by the builders before save.
 	SourceRunIDValidator func(string) error
 	// DefaultReviewState holds the default value on creation for the "review_state" field.
@@ -159,11 +149,6 @@ func ByDetail(opts ...sql.OrderTermOption) OrderOption {
 // ByAction orders the results by the action field.
 func ByAction(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAction, opts...).ToFunc()
-}
-
-// ByKind orders the results by the kind field.
-func ByKind(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldKind, opts...).ToFunc()
 }
 
 // ByCreatedByActorID orders the results by the created_by_actor_id field.

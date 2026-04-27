@@ -38,14 +38,7 @@ func (Insight) Fields() []ent.Field {
 			Optional(),
 		field.Text("action").
 			Optional(),
-		field.String("kind").
-			Default("insight").
-			NotEmpty().
-			MaxLen(100),
 		field.JSON("tags", []string{}).
-			Optional().
-			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
-		field.JSON("context", map[string]string{}).
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.JSON("links", []map[string]string{}).

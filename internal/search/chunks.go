@@ -31,7 +31,6 @@ func buildInsightChunks(item *postgres.Insight) []insightChunk {
 	)
 	core = append(core, mapValues(item.Example)...)
 	core = append(core, item.Tags...)
-	core = append(core, mapValues(item.Context)...)
 	core = append(core, linkValues(item.Links)...)
 
 	searchDocument := weightedDocument(item)
@@ -64,7 +63,7 @@ func weightedDocument(item *postgres.Insight) string {
 	addWeighted(4, item.Title, item.Problem)
 	addWeighted(3, mapValues(item.Example)...)
 	addWeighted(2, item.Answer, item.Action)
-	addWeighted(2, strings.Join(item.Tags, " "), strings.Join(mapValues(item.Context), " "))
+	addWeighted(2, strings.Join(item.Tags, " "))
 	addWeighted(1, item.Detail)
 	addWeighted(1, linkValues(item.Links)...)
 
@@ -109,7 +108,6 @@ func linkValues(links []map[string]string) []string {
 	out := make([]string, 0, len(links)*4)
 	for _, link := range links {
 		out = append(out,
-			link["kind"],
 			link["title"],
 			link["description"],
 			link["excerpt"],

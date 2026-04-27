@@ -144,20 +144,6 @@ func (_u *InsightUpdate) ClearAction() *InsightUpdate {
 	return _u
 }
 
-// SetKind sets the "kind" field.
-func (_u *InsightUpdate) SetKind(v string) *InsightUpdate {
-	_u.mutation.SetKind(v)
-	return _u
-}
-
-// SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *InsightUpdate) SetNillableKind(v *string) *InsightUpdate {
-	if v != nil {
-		_u.SetKind(*v)
-	}
-	return _u
-}
-
 // SetTags sets the "tags" field.
 func (_u *InsightUpdate) SetTags(v []string) *InsightUpdate {
 	_u.mutation.SetTags(v)
@@ -173,18 +159,6 @@ func (_u *InsightUpdate) AppendTags(v []string) *InsightUpdate {
 // ClearTags clears the value of the "tags" field.
 func (_u *InsightUpdate) ClearTags() *InsightUpdate {
 	_u.mutation.ClearTags()
-	return _u
-}
-
-// SetContext sets the "context" field.
-func (_u *InsightUpdate) SetContext(v map[string]string) *InsightUpdate {
-	_u.mutation.SetContext(v)
-	return _u
-}
-
-// ClearContext clears the value of the "context" field.
-func (_u *InsightUpdate) ClearContext() *InsightUpdate {
-	_u.mutation.ClearContext()
 	return _u
 }
 
@@ -378,11 +352,6 @@ func (_u *InsightUpdate) check() error {
 			return &ValidationError{Name: "answer", err: fmt.Errorf(`postgres: validator failed for field "Insight.answer": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Kind(); ok {
-		if err := insight.KindValidator(v); err != nil {
-			return &ValidationError{Name: "kind", err: fmt.Errorf(`postgres: validator failed for field "Insight.kind": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.SourceRunID(); ok {
 		if err := insight.SourceRunIDValidator(v); err != nil {
 			return &ValidationError{Name: "source_run_id", err: fmt.Errorf(`postgres: validator failed for field "Insight.source_run_id": %w`, err)}
@@ -446,9 +415,6 @@ func (_u *InsightUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ActionCleared() {
 		_spec.ClearField(insight.FieldAction, field.TypeString)
 	}
-	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(insight.FieldKind, field.TypeString, value)
-	}
 	if value, ok := _u.mutation.Tags(); ok {
 		_spec.SetField(insight.FieldTags, field.TypeJSON, value)
 	}
@@ -459,12 +425,6 @@ func (_u *InsightUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TagsCleared() {
 		_spec.ClearField(insight.FieldTags, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Context(); ok {
-		_spec.SetField(insight.FieldContext, field.TypeJSON, value)
-	}
-	if _u.mutation.ContextCleared() {
-		_spec.ClearField(insight.FieldContext, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Links(); ok {
 		_spec.SetField(insight.FieldLinks, field.TypeJSON, value)
@@ -644,20 +604,6 @@ func (_u *InsightUpdateOne) ClearAction() *InsightUpdateOne {
 	return _u
 }
 
-// SetKind sets the "kind" field.
-func (_u *InsightUpdateOne) SetKind(v string) *InsightUpdateOne {
-	_u.mutation.SetKind(v)
-	return _u
-}
-
-// SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *InsightUpdateOne) SetNillableKind(v *string) *InsightUpdateOne {
-	if v != nil {
-		_u.SetKind(*v)
-	}
-	return _u
-}
-
 // SetTags sets the "tags" field.
 func (_u *InsightUpdateOne) SetTags(v []string) *InsightUpdateOne {
 	_u.mutation.SetTags(v)
@@ -673,18 +619,6 @@ func (_u *InsightUpdateOne) AppendTags(v []string) *InsightUpdateOne {
 // ClearTags clears the value of the "tags" field.
 func (_u *InsightUpdateOne) ClearTags() *InsightUpdateOne {
 	_u.mutation.ClearTags()
-	return _u
-}
-
-// SetContext sets the "context" field.
-func (_u *InsightUpdateOne) SetContext(v map[string]string) *InsightUpdateOne {
-	_u.mutation.SetContext(v)
-	return _u
-}
-
-// ClearContext clears the value of the "context" field.
-func (_u *InsightUpdateOne) ClearContext() *InsightUpdateOne {
-	_u.mutation.ClearContext()
 	return _u
 }
 
@@ -891,11 +825,6 @@ func (_u *InsightUpdateOne) check() error {
 			return &ValidationError{Name: "answer", err: fmt.Errorf(`postgres: validator failed for field "Insight.answer": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Kind(); ok {
-		if err := insight.KindValidator(v); err != nil {
-			return &ValidationError{Name: "kind", err: fmt.Errorf(`postgres: validator failed for field "Insight.kind": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.SourceRunID(); ok {
 		if err := insight.SourceRunIDValidator(v); err != nil {
 			return &ValidationError{Name: "source_run_id", err: fmt.Errorf(`postgres: validator failed for field "Insight.source_run_id": %w`, err)}
@@ -976,9 +905,6 @@ func (_u *InsightUpdateOne) sqlSave(ctx context.Context) (_node *Insight, err er
 	if _u.mutation.ActionCleared() {
 		_spec.ClearField(insight.FieldAction, field.TypeString)
 	}
-	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(insight.FieldKind, field.TypeString, value)
-	}
 	if value, ok := _u.mutation.Tags(); ok {
 		_spec.SetField(insight.FieldTags, field.TypeJSON, value)
 	}
@@ -989,12 +915,6 @@ func (_u *InsightUpdateOne) sqlSave(ctx context.Context) (_node *Insight, err er
 	}
 	if _u.mutation.TagsCleared() {
 		_spec.ClearField(insight.FieldTags, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Context(); ok {
-		_spec.SetField(insight.FieldContext, field.TypeJSON, value)
-	}
-	if _u.mutation.ContextCleared() {
-		_spec.ClearField(insight.FieldContext, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Links(); ok {
 		_spec.SetField(insight.FieldLinks, field.TypeJSON, value)
