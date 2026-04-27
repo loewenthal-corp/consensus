@@ -17,6 +17,11 @@ import (
 
 const defaultTenantKey = "default"
 
+const (
+	defaultAdminPageSize = 25
+	maxAdminPageSize     = 100
+)
+
 var validOutcomes = map[string]struct{}{
 	"solved":         {},
 	"helped":         {},
@@ -31,6 +36,14 @@ type Service struct {
 	searcher search.Searcher
 }
 
+type InsightListPage struct {
+	Insights   []*consensusv1.Insight
+	Total      int
+	Page       int
+	PageSize   int
+	TotalPages int
+}
+
 func NewService(db *postgres.Client) *Service {
 	svc := &Service{db: db}
 	if db != nil {
@@ -42,25 +55,61 @@ func NewService(db *postgres.Client) *Service {
 }
 
 func (s *Service) ListRecentInsights(ctx context.Context, limit int) ([]*consensusv1.Insight, error) {
-	if s.db == nil {
-		return nil, nil
+	page, err := s.ListRecentInsightsPage(ctx, 1, limit)
+	if err != nil {
+		return nil, err
 	}
-	if limit <= 0 {
-		limit = 25
+	return page.Insights, nil
+}
+
+func (s *Service) ListRecentInsightsPage(ctx context.Context, page, pageSize int) (*InsightListPage, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = defaultAdminPageSize
+	}
+	if pageSize > maxAdminPageSize {
+		pageSize = maxAdminPageSize
+	}
+
+	out := &InsightListPage{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: 1,
+	}
+	if s.db == nil {
+		return out, nil
+	}
+
+	total, err := s.db.Insight.Query().
+		Where(insight.TenantKey(defaultTenantKey)).
+		Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("count recent insights: %w", err)
+	}
+	out.Total = total
+	if total > 0 {
+		out.TotalPages = (total + pageSize - 1) / pageSize
+	}
+	if page > out.TotalPages {
+		page = out.TotalPages
+		out.Page = page
 	}
 
 	insights, err := s.db.Insight.Query().
 		Where(insight.TenantKey(defaultTenantKey)).
 		Order(postgres.Desc(insight.FieldUpdatedAt)).
-		Limit(limit).
+		Limit(pageSize).
+		Offset((page - 1) * pageSize).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list recent insights: %w", err)
 	}
 
-	out := make([]*consensusv1.Insight, 0, len(insights))
+	out.Insights = make([]*consensusv1.Insight, 0, len(insights))
 	for _, item := range insights {
-		out = append(out, toProtoInsight(item))
+		out.Insights = append(out.Insights, toProtoInsight(item))
 	}
 	return out, nil
 }
@@ -78,6 +127,8 @@ func (s *Service) Search(ctx context.Context, req *consensusv1.InsightServiceSea
 	searchResults, err := s.searcher.Search(ctx, search.Request{
 		TenantKey: defaultTenantKey,
 		Query:     rawQuery,
+		Tags:      req.GetTags(),
+		Context:   req.GetContext(),
 		Limit:     int(req.GetLimit()),
 	})
 	if err != nil {

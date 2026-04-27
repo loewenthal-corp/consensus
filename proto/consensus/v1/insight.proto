@@ -6,20 +6,21 @@ import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
 // InsightService defines API operations for finding, creating, editing, and
-// scoring reusable insights. The default MCP listener exposes only the
+// scoring reusable insights. The default MCP listener exposes only the small
 // search/get/create/outcome subset.
 service InsightService {
-  // Search returns ranked insights for a problem statement, exact error,
-  // failing command, stack trace, snippet, or repo/tool context. Include the
-  // smallest concrete example available when it helps identify the issue.
+  // Search returns ranked insights for a concrete problem, exact error, failing
+  // command, stack trace, snippet, or repo/tool context. Use it as a one-shot
+  // retrieval tool before rediscovering a known issue; follow returned links or
+  // fetch a matching insight when useful.
   rpc Search(InsightServiceSearchRequest) returns (InsightServiceSearchResponse);
 
   // Get returns one insight by local ID or federated reference.
   rpc Get(InsightServiceGetRequest) returns (InsightServiceGetResponse);
 
-  // Create submits a candidate insight after a thread discovers a durable
-  // answer. Store the distilled situation, answer, action, optional example,
-  // and useful links instead of pasting a whole conversation.
+  // Create submits a compact candidate insight after a thread discovers a
+  // durable answer. This is not a note-for-later or transcript store; include
+  // the situation, answer, action, optional example, and useful links.
   rpc Create(InsightServiceCreateRequest) returns (InsightServiceCreateResponse);
 
   // Update amends an existing local insight when it needs clearer wording,

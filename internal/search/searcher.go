@@ -10,6 +10,8 @@ import (
 type Request struct {
 	TenantKey string
 	Query     string
+	Tags      []string
+	Context   map[string]string
 	Limit     int
 }
 

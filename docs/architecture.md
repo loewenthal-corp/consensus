@@ -1,6 +1,6 @@
 # Consensus Architecture
 
-Consensus is a remote-first MCP and API service for shared agent insights. It
+Consensus is a remote-first MCP and API component for shared agent insights. It
 lets agents retrieve proven answers, create distilled insights, and record
 whether an insight actually worked after being applied.
 
@@ -15,9 +15,9 @@ thread rarely survives as reusable context for the next agent. The result is
 repeated debugging, repeated failed tool calls, repeated CI failures, and
 repeated token spend.
 
-Consensus is a market-based context layer. It does not assume a central team can
-predefine the perfect context bundle. Instead, it lets the organization discover
-valuable context through use:
+Consensus is a market-shaped context layer. It does not assume a central team
+can predefine the perfect context bundle. Instead, it lets the organization
+discover valuable context through use:
 
 - Contribution is supply: agents and humans submit compact insights.
 - Retrieval is demand: agents search while doing real work.
@@ -35,6 +35,10 @@ valuable context through use:
   MCP schemas.
 - Keep the default MCP surface small enough that agents can use it without
   burning context on product machinery.
+- Keep usage simple enough that the MCP instructions, tool descriptions, and
+  schemas explain the happy path without a required skill.
+- Optimize for high value per context token in context-window constrained
+  applications and cheaper model harnesses.
 - Back production deployments with Postgres and Ent, not an embedded-only store.
 - Rank answers by relevance, applicability, freshness, provenance, and observed
   utility.
@@ -49,8 +53,15 @@ valuable context through use:
   but the durable artifact is a distilled insight.
 - Consensus is not a docs site. Long-form documentation can be linked, but the
   stored object should stay small and answer-shaped.
-- Consensus is not a prompt pack. Skills and instructions can improve usage, but
-  the product surface is an MCP/API service.
+- Consensus is not a prompt pack or required skill. Skills can wrap it, but the
+  product surface is an MCP/API service whose tool descriptions should be enough
+  for normal use.
+- Consensus is not a CLI-first product. A CLI can help operators and developers,
+  but agents should not need shell access or harness-specific CLI instructions
+  to use the default surface.
+- Consensus is not an autonomous research loop. It should search, return
+  insights and links, record outcomes, and stop; the agent owns the rest of the
+  task.
 - Consensus is not local-first. Local-only mode can exist for testing, but the
   core value is shared organizational context.
 - Consensus is not a generic vector database wrapper. Retrieval is useful only
@@ -272,6 +283,11 @@ Tools are model-controlled and should be narrow. Mutating tools require
 idempotency keys where useful and audit records. In authenticated deployments,
 the same tools can also require scopes.
 
+The normal usage pattern is one-shot retrieval: search for the concrete problem,
+fetch or follow links if a result looks useful, apply the answer, and record the
+outcome. Consensus should not add a recursive question-generation or consensus
+loop to the agent's context.
+
 | Conceptual operation | Proto method | Scope | Mutates | Description |
 | --- | --- | --- | --- | --- |
 | `insight.search` | `InsightService.Search` | `insight:read` | No | Search local and optionally configured upstream insights for a problem, exact error, command, snippet, or context. |
@@ -327,15 +343,17 @@ count changes, or link changes, but not required for the first version.
 
 ### Prompts
 
-Prompts are user-controlled in MCP. They are not required for the core service,
-but can improve adoption:
+Prompts are user-controlled in MCP. They are not required for the core service
+and should not be needed for the happy path. Optional prompts can improve
+adoption:
 
 - `capture_insight`: help a user or agent distill a session into a candidate.
 - `review_insight`: help a reviewer evaluate generality, risk, and evidence.
 - `search_before_debugging`: guide a user-initiated search workflow.
 
 These should remain optional wrappers around the API rather than the source of
-product logic.
+product logic. The default low-context integration should work from the server
+instructions, tool descriptions, and schemas alone.
 
 ## Data Model
 
@@ -906,7 +924,8 @@ Relevant current MCP guidance:
 12. Add worker pipeline for embeddings, dedupe, scoring, and moderation.
 13. Add optional OAuth/scoped authorization for deployments that need stronger
     boundaries.
-14. Add Go CLI and agent skill guidance as distribution, not core dependency.
+14. Add Go CLI and agent skill guidance as optional adapters, not core
+    dependencies.
 
 ## Sources
 

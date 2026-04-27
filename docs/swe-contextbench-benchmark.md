@@ -186,7 +186,7 @@ task containers::up
 Local endpoints:
 
 - Admin: <http://localhost:8080/admin/>
-- MCP: <http://localhost:8080/mcp>
+- MCP: <http://localhost:8081/mcp>
 - Health: <http://localhost:8080/healthz>
 
 For Codex CLI, prefer isolated benchmark profiles so the baseline and Consensus
@@ -200,7 +200,7 @@ Baseline profile:
 
 Consensus profile:
 
-- one MCP server entry pointing at `http://localhost:8080/mcp`
+- one MCP server entry pointing at `http://localhost:8081/mcp`
 - same model as baseline
 - same sandbox and approval settings
 

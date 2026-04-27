@@ -3,9 +3,11 @@ package search
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 
@@ -62,7 +64,31 @@ func (s *PostgresSearcher) Search(ctx context.Context, req Request) ([]Result, e
 		candidateLimit = maxCandidateLimit
 	}
 
-	rows, err := s.db.QueryContext(ctx, searchSQL, tenantKey, query, candidateLimit, limit)
+	tags := compactSearchTags(req.Tags)
+	contextFilters := compactSearchContext(req.Context)
+	if tags == nil {
+		tags = []string{}
+	}
+	if contextFilters == nil {
+		contextFilters = map[string]string{}
+	}
+	tagsJSON, err := json.Marshal(tags)
+	if err != nil {
+		return nil, fmt.Errorf("marshal tag filters: %w", err)
+	}
+	contextJSON, err := json.Marshal(contextFilters)
+	if err != nil {
+		return nil, fmt.Errorf("marshal context filters: %w", err)
+	}
+	filterSignals := make([]string, 0, 2)
+	if len(tags) > 0 {
+		filterSignals = append(filterSignals, "tag")
+	}
+	if len(contextFilters) > 0 {
+		filterSignals = append(filterSignals, "context")
+	}
+
+	rows, err := s.db.QueryContext(ctx, searchSQL, tenantKey, query, candidateLimit, limit, string(tagsJSON), string(contextJSON))
 	if err != nil {
 		return nil, fmt.Errorf("run bm25 search: %w", err)
 	}
@@ -82,12 +108,52 @@ func (s *PostgresSearcher) Search(ctx context.Context, req Request) ([]Result, e
 		); err != nil {
 			return nil, fmt.Errorf("scan bm25 search result: %w", err)
 		}
-		results = append(results, row.result())
+		results = append(results, row.result(filterSignals))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate bm25 search results: %w", err)
 	}
 	return results, nil
+}
+
+func compactSearchTags(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func compactSearchContext(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(values))
+	for key, value := range values {
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			continue
+		}
+		out[key] = value
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (s *PostgresSearcher) IndexInsight(ctx context.Context, item *postgres.Insight) error {
@@ -176,9 +242,12 @@ type searchRow struct {
 	chunkKind string
 }
 
-func (r searchRow) result() Result {
-	signals := []string{"bm25"}
+func (r searchRow) result(filterSignals []string) Result {
+	signals := append([]string{"bm25"}, filterSignals...)
 	reason := "ranked highly by BM25"
+	if len(filterSignals) > 0 {
+		reason += " within requested filters"
+	}
 	if r.positive > 0 || r.negative > 0 {
 		signals = append(signals, "outcome")
 	}
@@ -303,6 +372,8 @@ WITH ranked_chunks AS (
 	WHERE c.tenant_key = $1
 		AND i.lifecycle_state = 'active'
 		AND i.review_state = 'approved'
+		AND (jsonb_array_length($5::jsonb) = 0 OR COALESCE(i.tags, '[]'::jsonb) @> $5::jsonb)
+		AND ($6::jsonb = '{}'::jsonb OR COALESCE(i.context, '{}'::jsonb) @> $6::jsonb)
 	ORDER BY c.search_document <@> to_bm25query($2, 'insight_search_chunks_bm25_idx'), c.updated_at DESC
 	LIMIT $3
 ),

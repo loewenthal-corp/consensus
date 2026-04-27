@@ -74,6 +74,42 @@ func TestServer_ConnectInsightFlow(t *testing.T) {
 	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "bm25")
 	require.Contains(t, search.GetResults()[0].GetRankReason(), "BM25")
 
+	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
+		Query: "source maps duplicate commit",
+		Tags:  []string{"posthog"},
+		Limit: 5,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, search.GetResults())
+	require.Equal(t, created.GetInsight().GetId(), search.GetResults()[0].GetInsight().GetId())
+	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "tag")
+
+	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
+		Query: "source maps duplicate commit",
+		Tags:  []string{"missing-tag"},
+		Limit: 5,
+	})
+	require.NoError(t, err)
+	require.Empty(t, search.GetResults())
+
+	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
+		Query:   "source maps duplicate commit",
+		Context: map[string]string{"tool": "turbo"},
+		Limit:   5,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, search.GetResults())
+	require.Equal(t, created.GetInsight().GetId(), search.GetResults()[0].GetInsight().GetId())
+	require.Contains(t, search.GetResults()[0].GetMatchedSignals(), "context")
+
+	search, err = client.Search(ctx, &consensusv1.InsightServiceSearchRequest{
+		Query:   "source maps duplicate commit",
+		Context: map[string]string{"tool": "vite"},
+		Limit:   5,
+	})
+	require.NoError(t, err)
+	require.Empty(t, search.GetResults())
+
 	got, err := client.Get(ctx, &consensusv1.InsightServiceGetRequest{Ref: created.GetInsight().GetId()})
 	require.NoError(t, err)
 	require.Equal(t, created.GetInsight().GetTitle(), got.GetInsight().GetTitle())

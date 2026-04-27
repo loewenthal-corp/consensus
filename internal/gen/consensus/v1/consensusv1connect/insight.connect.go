@@ -48,15 +48,16 @@ const (
 
 // InsightServiceClient is a client for the consensus.v1.InsightService service.
 type InsightServiceClient interface {
-	// Search returns ranked insights for a problem statement, exact error,
-	// failing command, stack trace, snippet, or repo/tool context. Include the
-	// smallest concrete example available when it helps identify the issue.
+	// Search returns ranked insights for a concrete problem, exact error, failing
+	// command, stack trace, snippet, or repo/tool context. Use it as a one-shot
+	// retrieval tool before rediscovering a known issue; follow returned links or
+	// fetch a matching insight when useful.
 	Search(context.Context, *v1.InsightServiceSearchRequest) (*v1.InsightServiceSearchResponse, error)
 	// Get returns one insight by local ID or federated reference.
 	Get(context.Context, *v1.InsightServiceGetRequest) (*v1.InsightServiceGetResponse, error)
-	// Create submits a candidate insight after a thread discovers a durable
-	// answer. Store the distilled situation, answer, action, optional example,
-	// and useful links instead of pasting a whole conversation.
+	// Create submits a compact candidate insight after a thread discovers a
+	// durable answer. This is not a note-for-later or transcript store; include
+	// the situation, answer, action, optional example, and useful links.
 	Create(context.Context, *v1.InsightServiceCreateRequest) (*v1.InsightServiceCreateResponse, error)
 	// Update amends an existing local insight when it needs clearer wording,
 	// fresher links, corrected context, or revised guidance.
@@ -168,15 +169,16 @@ func (c *insightServiceClient) RecordOutcome(ctx context.Context, req *v1.Insigh
 
 // InsightServiceHandler is an implementation of the consensus.v1.InsightService service.
 type InsightServiceHandler interface {
-	// Search returns ranked insights for a problem statement, exact error,
-	// failing command, stack trace, snippet, or repo/tool context. Include the
-	// smallest concrete example available when it helps identify the issue.
+	// Search returns ranked insights for a concrete problem, exact error, failing
+	// command, stack trace, snippet, or repo/tool context. Use it as a one-shot
+	// retrieval tool before rediscovering a known issue; follow returned links or
+	// fetch a matching insight when useful.
 	Search(context.Context, *v1.InsightServiceSearchRequest) (*v1.InsightServiceSearchResponse, error)
 	// Get returns one insight by local ID or federated reference.
 	Get(context.Context, *v1.InsightServiceGetRequest) (*v1.InsightServiceGetResponse, error)
-	// Create submits a candidate insight after a thread discovers a durable
-	// answer. Store the distilled situation, answer, action, optional example,
-	// and useful links instead of pasting a whole conversation.
+	// Create submits a compact candidate insight after a thread discovers a
+	// durable answer. This is not a note-for-later or transcript store; include
+	// the situation, answer, action, optional example, and useful links.
 	Create(context.Context, *v1.InsightServiceCreateRequest) (*v1.InsightServiceCreateResponse, error)
 	// Update amends an existing local insight when it needs clearer wording,
 	// fresher links, corrected context, or revised guidance.

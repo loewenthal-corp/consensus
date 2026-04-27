@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -107,16 +108,16 @@ func newMCPHandler(svc *consensus.Service) (http.Handler, error) {
 	}), nil
 }
 
-const mcpInstructions = `Consensus is market-based context engineering for AI agents.
+const mcpInstructions = `Consensus is a small MCP component for reusing durable insights from prior agent work.
 
-Use it as a shared organizational memory layer for compact, evidence-backed insights that should survive one agent thread. Search before rediscovering a solution. Create only durable insights with the situation, answer, concrete action, optional example, and useful links. Record outcomes after an insight actually solved, helped, failed after being applied, or became stale so ranking can learn from real outcomes.
+Use it like grep or web search: search when a previous answer might save work; if a result applies, get it or follow its links; after applying it, record the outcome. Create only compact issue/answer/action insights with evidence.
 
-The MCP surface is intentionally tiny: search, get, create, and record_outcome. Links carry docs, source threads, related insights, issues, and evidence as fields on insights. Administrative edits and broader API operations belong on the API/admin port, not in agent tools.`
+Consensus is not a workflow engine and should not run a back-and-forth research loop for the agent. The MCP surface is intentionally tiny: search, get, create, and record_outcome.`
 
 var mcpToolComments = map[protoreflect.FullName]string{
-	"consensus.v1.InsightService.Search":        `Search returns ranked insights for a problem statement, exact error, failing command, stack trace, snippet, or repo/tool context. Include the smallest concrete example available when it helps identify the issue.`,
+	"consensus.v1.InsightService.Search":        `Search returns ranked insights for a concrete problem, exact error, failing command, stack trace, snippet, or repo/tool context. Use it as a one-shot retrieval tool before rediscovering a known issue; follow returned links or fetch a matching insight when useful.`,
 	"consensus.v1.InsightService.Get":           `Get returns one insight by local ID or federated reference, including the situation, answer, action, optional example, links, lifecycle state, and review state.`,
-	"consensus.v1.InsightService.Create":        `Create submits a new candidate insight after a thread discovers a durable answer. Store the distilled situation, answer, concrete action, optional example, and useful links instead of pasting a whole conversation.`,
+	"consensus.v1.InsightService.Create":        `Create submits a compact candidate insight after a thread discovers a durable answer. This is not a note-for-later or transcript store; include the situation, answer, action, optional example, and useful links.`,
 	"consensus.v1.InsightService.RecordOutcome": `RecordOutcome records whether an insight worked after it was applied. Use did_not_work only when the insight appeared to match the problem and the suggested action was tried but failed, not when the result was merely irrelevant.`,
 }
 
@@ -258,10 +259,47 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 
 func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		insights, err := svc.ListRecentInsights(r.Context(), 25)
-		data := adminPageData{Insights: insights}
+		values := r.URL.Query()
+		pageSize := parseAdminInt(values.Get("page_size"), 25, 1, 100)
+		recent, err := svc.ListRecentInsightsPage(r.Context(), parseAdminInt(values.Get("page"), 1, 1, 100000), pageSize)
+		if recent == nil {
+			recent = &consensus.InsightListPage{Page: 1, PageSize: pageSize, TotalPages: 1}
+		}
+
+		data := adminPageData{
+			Recent:         recent,
+			Search:         adminSearchFromRequest(r),
+			ClearSearchURL: adminClearSearchURL(r),
+		}
 		if err != nil {
 			data.Error = err.Error()
+		}
+		if recent.Page > 1 {
+			data.PreviousPageURL = adminPageURL(r, recent.Page-1)
+		}
+		if recent.Total > 0 && recent.Page < recent.TotalPages {
+			data.NextPageURL = adminPageURL(r, recent.Page+1)
+		}
+
+		if strings.TrimSpace(data.Search.Query) != "" {
+			data.Search.Searched = true
+			contextFilters, err := parseAdminSearchContext(data.Search.Context)
+			if err != nil {
+				data.Search.Error = err.Error()
+			} else {
+				resp, err := svc.Search(r.Context(), &consensusv1.InsightServiceSearchRequest{
+					Query:            data.Search.Query,
+					Tags:             parseAdminSearchTags(data.Search.Tags),
+					Context:          contextFilters,
+					Limit:            int32(data.Search.Limit),
+					IncludeUpstreams: data.Search.IncludeUpstreams,
+				})
+				if err != nil {
+					data.Search.Error = err.Error()
+				} else {
+					data.Search.Results = resp.GetResults()
+				}
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -272,8 +310,126 @@ func handleAdmin(svc *consensus.Service) http.HandlerFunc {
 }
 
 type adminPageData struct {
-	Insights []*consensusv1.Insight
-	Error    string
+	Recent          *consensus.InsightListPage
+	Search          adminSearchData
+	PreviousPageURL string
+	NextPageURL     string
+	ClearSearchURL  string
+	Error           string
+}
+
+type adminSearchData struct {
+	Query            string
+	Tags             string
+	Context          string
+	Limit            int
+	IncludeUpstreams bool
+	Searched         bool
+	Results          []*consensusv1.InsightSearchResult
+	Error            string
+}
+
+func adminSearchFromRequest(r *http.Request) adminSearchData {
+	values := r.URL.Query()
+	return adminSearchData{
+		Query:            strings.TrimSpace(values.Get("query")),
+		Tags:             values.Get("tags"),
+		Context:          values.Get("context"),
+		Limit:            parseAdminInt(values.Get("limit"), 10, 0, 50),
+		IncludeUpstreams: parseAdminBool(values.Get("include_upstreams")),
+	}
+}
+
+func parseAdminInt(raw string, fallback, min, max int) int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}
+
+func parseAdminBool(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "on", "yes":
+		return true
+	default:
+		return false
+	}
+}
+
+func parseAdminSearchTags(raw string) []string {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r'
+	})
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if _, ok := seen[part]; ok {
+			continue
+		}
+		seen[part] = struct{}{}
+		out = append(out, part)
+	}
+	return out
+}
+
+func parseAdminSearchContext(raw string) (map[string]string, error) {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r'
+	})
+	out := make(map[string]string, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(part, "=")
+		if !ok {
+			return nil, fmt.Errorf("context filters must use key=value entries")
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			return nil, fmt.Errorf("context filters must use non-empty key=value entries")
+		}
+		out[key] = value
+	}
+	return out, nil
+}
+
+func adminPageURL(r *http.Request, page int) string {
+	values := r.URL.Query()
+	values.Set("page", strconv.Itoa(page))
+	if values.Get("page_size") == "" {
+		values.Set("page_size", "25")
+	}
+	return r.URL.Path + "?" + values.Encode()
+}
+
+func adminClearSearchURL(r *http.Request) string {
+	values := r.URL.Query()
+	for _, key := range []string{"query", "tags", "context", "limit", "include_upstreams", "page"} {
+		values.Del(key)
+	}
+	encoded := values.Encode()
+	if encoded == "" {
+		return "/admin/"
+	}
+	return "/admin/?" + encoded
 }
 
 var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
@@ -333,6 +489,22 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       font-size: 14px;
       white-space: nowrap;
     }
+    section {
+      margin-top: 22px;
+    }
+    h2 {
+      font-size: 17px;
+      line-height: 1.2;
+      margin: 0;
+      font-weight: 680;
+    }
+    .section-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
     .error {
       border: 1px solid #c95252;
       background: #fff0f0;
@@ -341,6 +513,86 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       margin-bottom: 16px;
       border-radius: 6px;
       font-size: 14px;
+    }
+    .search-panel {
+      border: 1px solid #d8ddd7;
+      background: white;
+      padding: 16px;
+    }
+    .search-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, 2fr) minmax(150px, 1fr) minmax(170px, 1fr) 92px;
+      gap: 12px;
+      align-items: end;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    label, .field-label {
+      color: #576166;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    input[type="search"], input[type="text"], input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #cfd6cf;
+      background: #fbfcfa;
+      color: #1f2528;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 14px;
+      padding: 9px 10px;
+      min-height: 38px;
+    }
+    input:focus {
+      outline: 2px solid #8fb7a3;
+      outline-offset: 1px;
+      border-color: #6d9a84;
+    }
+    .search-options {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .check-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #3d474b;
+      font-size: 14px;
+      font-weight: 520;
+    }
+    .actions {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+    button, .button-link {
+      border: 1px solid #283c32;
+      background: #283c32;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 650;
+      min-height: 38px;
+      padding: 8px 13px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .button-link.secondary {
+      background: transparent;
+      color: #283c32;
     }
     table {
       width: 100%;
@@ -373,6 +625,30 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
     .summary {
       color: #4f5a5f;
     }
+    .meta {
+      color: #687479;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .signals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .signal {
+      border: 1px solid #cfd6cf;
+      background: #f5f7f3;
+      border-radius: 999px;
+      color: #3d474b;
+      display: inline-flex;
+      font-size: 12px;
+      line-height: 1;
+      padding: 5px 7px;
+    }
+    .score {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
     .empty {
       border: 1px solid #d8ddd7;
       background: white;
@@ -380,12 +656,58 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
       color: #576166;
       font-size: 14px;
     }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+      color: #576166;
+      font-size: 14px;
+    }
+    .page-link, .page-disabled {
+      border: 1px solid #cfd6cf;
+      border-radius: 6px;
+      padding: 7px 10px;
+      text-decoration: none;
+    }
+    .page-link {
+      color: #283c32;
+      background: white;
+    }
+    .page-disabled {
+      color: #90999d;
+      background: #f0f2ef;
+    }
+    @media (max-width: 820px) {
+      main { padding: 24px 16px; }
+      header, .section-heading, .search-options {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .search-grid {
+        grid-template-columns: 1fr;
+      }
+      .pagination {
+        justify-content: flex-start;
+      }
+    }
     @media (prefers-color-scheme: dark) {
       :root, body { background: #141819; color: #eef2ef; }
-      header, table, th, td, .empty { border-color: #30383b; }
-      table, .empty { background: #1b2022; }
+      header, table, th, td, .empty, .search-panel { border-color: #30383b; }
+      table, .empty, .search-panel, .page-link { background: #1b2022; }
       th { background: #242b2e; color: #b4c0c3; }
-      .summary, .count { color: #b4c0c3; }
+      .summary, .count, label, .field-label, .meta { color: #b4c0c3; }
+      input[type="search"], input[type="text"], input[type="number"] {
+        background: #141819;
+        border-color: #3a4448;
+        color: #eef2ef;
+      }
+      button, .button-link { background: #8fb7a3; border-color: #8fb7a3; color: #111615; }
+      .button-link.secondary { background: transparent; color: #cce0d4; }
+      .check-row, .page-link { color: #cce0d4; }
+      .signal { background: #242b2e; border-color: #3a4448; color: #d5dddf; }
+      .page-disabled { background: #202629; border-color: #30383b; color: #7f898d; }
       .error { background: #331c1c; color: #ffc7c7; border-color: #7f3434; }
     }
   </style>
@@ -394,10 +716,98 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
   <main>
     <header>
       <h1>Consensus Admin</h1>
-      <div class="count">{{len .Insights}} {{insightLabel (len .Insights)}}</div>
+      <div class="count">{{.Recent.Total}} {{insightLabel .Recent.Total}}</div>
     </header>
     {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
-    {{if .Insights}}
+
+    <section class="search-panel" aria-labelledby="search-heading">
+      <div class="section-heading">
+        <h2 id="search-heading">MCP Search</h2>
+        {{if .Search.Searched}}<div class="count">{{len .Search.Results}} {{insightLabel (len .Search.Results)}}</div>{{end}}
+      </div>
+      <form method="get" action="/admin/">
+        <input type="hidden" name="page_size" value="{{.Recent.PageSize}}">
+        <div class="search-grid">
+          <div class="field">
+            <label for="query">Query</label>
+            <input id="query" type="search" name="query" value="{{.Search.Query}}" placeholder="posthog sourcemaps upload duplicate commit">
+          </div>
+          <div class="field">
+            <label for="tags">Tags</label>
+            <input id="tags" type="text" name="tags" value="{{.Search.Tags}}" placeholder="posthog, source-maps">
+          </div>
+          <div class="field">
+            <label for="context">Context</label>
+            <input id="context" type="text" name="context" value="{{.Search.Context}}" placeholder="tool=turbo">
+          </div>
+          <div class="field">
+            <label for="limit">Limit</label>
+            <input id="limit" type="number" name="limit" min="0" max="50" value="{{.Search.Limit}}">
+          </div>
+        </div>
+        <div class="search-options">
+          <label class="check-row" for="include_upstreams">
+            <input id="include_upstreams" type="checkbox" name="include_upstreams" value="true" {{if .Search.IncludeUpstreams}}checked{{end}}>
+            Include upstreams
+          </label>
+          <div class="actions">
+            <button type="submit">Search</button>
+            <a class="button-link secondary" href="{{.ClearSearchURL}}">Clear</a>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    {{if .Search.Searched}}
+    <section aria-labelledby="results-heading">
+      <div class="section-heading">
+        <h2 id="results-heading">Search Results</h2>
+      </div>
+      {{if .Search.Error}}
+      <div class="error">{{.Search.Error}}</div>
+      {{else if .Search.Results}}
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 37%">Insight</th>
+            <th style="width: 10%">Score</th>
+            <th style="width: 16%">Signals</th>
+            <th style="width: 23%">Rank Reason</th>
+            <th style="width: 14%">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Search.Results}}
+          <tr>
+            <td>
+              <div class="title">{{.Insight.Title}}</div>
+              <div class="summary">{{.Insight.Answer}}</div>
+              <div class="meta">{{.Insight.Id}} / {{.Insight.Kind}}</div>
+            </td>
+            <td><span class="score">{{printf "%.6f" .Score}}</span></td>
+            <td>
+              <div class="signals">
+                {{range .MatchedSignals}}<span class="signal">{{.}}</span>{{end}}
+              </div>
+            </td>
+            <td>{{.RankReason}}</td>
+            <td>{{formatTime .Insight.UpdatedAt}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty">No search results.</div>
+      {{end}}
+    </section>
+    {{end}}
+
+    <section aria-labelledby="recent-heading">
+      <div class="section-heading">
+        <h2 id="recent-heading">Recent Insights</h2>
+        <div class="count">Page {{.Recent.Page}} of {{.Recent.TotalPages}}</div>
+      </div>
+    {{if .Recent.Insights}}
     <table>
       <thead>
         <tr>
@@ -409,7 +819,7 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
         </tr>
       </thead>
       <tbody>
-        {{range .Insights}}
+        {{range .Recent.Insights}}
         <tr>
           <td>
             <div class="title">{{.Title}}</div>
@@ -423,9 +833,17 @@ var adminTemplate = template.Must(template.New("admin").Funcs(template.FuncMap{
         {{end}}
       </tbody>
     </table>
+    {{if gt .Recent.TotalPages 1}}
+    <nav class="pagination" aria-label="Recent insights pages">
+      {{if .PreviousPageURL}}<a class="page-link" href="{{.PreviousPageURL}}">Previous</a>{{else}}<span class="page-disabled">Previous</span>{{end}}
+      <span>Page {{.Recent.Page}} of {{.Recent.TotalPages}}</span>
+      {{if .NextPageURL}}<a class="page-link" href="{{.NextPageURL}}">Next</a>{{else}}<span class="page-disabled">Next</span>{{end}}
+    </nav>
+    {{end}}
     {{else}}
     <div class="empty">No insights yet.</div>
     {{end}}
+    </section>
   </main>
 </body>
 </html>`))
