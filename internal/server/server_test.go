@@ -173,11 +173,42 @@ func TestServer_MCPDebugLogsInsightExchange(t *testing.T) {
 	require.Contains(t, text, `"limit":5`)
 }
 
+func TestServer_MCPHealthz(t *testing.T) {
+	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
+	require.NoError(t, err)
+
+	for _, path := range []string{"/healthz", "/"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		handler.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code, path)
+		require.Contains(t, rec.Body.String(), `"status":"ok"`, path)
+		require.Contains(t, rec.Body.String(), `"service":"consensus"`, path)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	handler.ServeHTTP(rec, req)
+	require.NotContains(t, rec.Body.String(), `"status":"ok"`)
+	require.NotContains(t, rec.Body.String(), `"service":"consensus"`)
+
+	body := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`)
+	req = httptest.NewRequest(http.MethodPost, "/mcp", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotEmpty(t, rec.Header().Get("Mcp-Session-Id"))
+	require.Contains(t, rec.Body.String(), "Consensus")
+}
+
 func TestServer_MCPDoesNotServeAPIOrAdmin(t *testing.T) {
 	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
 	require.NoError(t, err)
 
-	for _, path := range []string{"/admin/", "/healthz", "/consensus.v1.InsightService/Search"} {
+	for _, path := range []string{"/admin/", "/consensus.v1.InsightService/Search"} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		handler.ServeHTTP(rec, req)
