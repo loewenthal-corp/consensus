@@ -60,6 +60,8 @@ func NewMCP(cfg Config) (http.Handler, error) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", mcpHandler)
+	mux.HandleFunc("GET /healthz", handleHealthz)
+	mux.HandleFunc("GET /{$}", handleHealthz)
 	return requestMiddleware(mux), nil
 }
 
