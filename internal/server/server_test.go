@@ -173,15 +173,51 @@ func TestServer_MCPDebugLogsInsightExchange(t *testing.T) {
 	require.Contains(t, text, `"limit":5`)
 }
 
+func TestServer_MCPServesHealthChecks(t *testing.T) {
+	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
+	require.NoError(t, err)
+
+	const healthBody = `{"status":"ok","service":"consensus"}`
+	for _, path := range []string{"/healthz", "/"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		handler.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code, path)
+		require.Equal(t, "application/json", rec.Header().Get("Content-Type"), path)
+		require.JSONEq(t, healthBody, rec.Body.String(), path)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req.Header.Set("Accept", "text/event-stream")
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "Mcp-Session-Id")
+	require.NotContains(t, rec.Body.String(), `"service":"consensus"`)
+
+	body := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`)
+	req = httptest.NewRequest(http.MethodPost, "/mcp", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotEmpty(t, rec.Header().Get("Mcp-Session-Id"))
+	require.NotContains(t, rec.Body.String(), `"service":"consensus"`)
+}
+
 func TestServer_MCPDoesNotServeAPIOrAdmin(t *testing.T) {
 	handler, err := server.NewMCP(server.Config{Service: consensus.NewService(nil)})
 	require.NoError(t, err)
 
-	for _, path := range []string{"/admin/", "/healthz", "/consensus.v1.InsightService/Search"} {
+	// /healthz and / are served on this listener so the gateway health check
+	// can mark the MCP backend healthy. Those paths used to 404; that was the
+	// bug that made every request to the published hostname return 503.
+	for _, path := range []string{"/admin/", "/consensus.v1.InsightService/Search"} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		handler.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.Equal(t, http.StatusNotFound, rec.Code, path)
 	}
 }
 

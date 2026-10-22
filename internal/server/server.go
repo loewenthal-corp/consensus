@@ -60,6 +60,11 @@ func NewMCP(cfg Config) (http.Handler, error) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", mcpHandler)
+	// The Gateway health-checks this listener on its serving port. GKE's
+	// default check requests GET /, and the declared HealthCheckPolicy
+	// requests GET /healthz. /{$} matches only the exact root path.
+	mux.HandleFunc("GET /healthz", handleHealthz)
+	mux.HandleFunc("GET /{$}", handleHealthz)
 	return requestMiddleware(mux), nil
 }
 
